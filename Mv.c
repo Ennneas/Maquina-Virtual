@@ -56,9 +56,8 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
                 version = x;
             }
             else
-            {
                 tamanioCS+= x;
-            }
+
         }
         if (strcmp(identificador, "VMX25") != 0)
             break;
