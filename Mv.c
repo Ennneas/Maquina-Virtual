@@ -72,12 +72,12 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 }
 void main(char argc, char *argv[])
 {
-    char nombreArch[256];//obra de ciro pertussi
+    char nombreArch[256];
     int tabla_segmentos[8];
     int registros[32];
     char MP[MAX_MEMORIA];
     strcpy(nombreArch, argv[1]);
-    printf("Nombre archivo: %s", nombreArch);//obra de ciro pertuss
+    printf("Nombre archivo: %s", nombreArch);
     leer_codigo(MP, tabla_segmentos, nombreArch);
     inicializa_registros(tabla_segmentos, registros);
 }
