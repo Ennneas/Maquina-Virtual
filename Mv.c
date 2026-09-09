@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "EjecutaInstruccion.h"
 #define IP 0
 #define OPC 1
 #define OP1 2
@@ -21,13 +20,25 @@
 #define DS 27
 #define MAX_MEMORIA 16384
 typedef struct 
-{
+{   
     char mnemonico[5];
     int codigo;
 }Operacion;
-
-typedef Operacion Operaciones[28];
-
+void ejecuta_instruccion(char MP[],int registros[],int tabla_segmentos[],Operacion VMnemonicos[]){
+    char primer_byte;
+    int top1,top2,opc;
+    if (registros[IP] <= registros[DS] + (tabla_segmentos[0] & 0x00FF)) {//suponiendo que el CS siempre esta en el 0 de la tabla de segmentos 
+        primer_byte=MP[registros[IP]];
+        top1=(primer_byte & 0b11000000);
+        top2=(primer_byte & 0b00110000);
+        opc=(primer_byte & 0b00011111);
+        if (!valida_operacion(opc,VMnemonicos))
+            printf("Operacion Invalida");//ERROR INSTRUCCION INVALIDA
+        else{
+            cargar_operandos(op1,op2,MP);
+        }
+    }else//SEGMENTATION FAULT
+}
 void inicializa_registros(int tabla_segmentos[], int registros[])
 {
     int i, j;
@@ -84,8 +95,8 @@ void main(char argc, char *argv[])
     int tabla_segmentos[8];
     int registros[32];
     char MP[MAX_MEMORIA];
-    Operaciones Mnemonicos;
+    Operacion VMnemonicos[28];
     strcpy(nombreArch, argv[1]);
     leer_codigo(MP,tabla_segmentos,nombreArch);
-        
+    
 }
