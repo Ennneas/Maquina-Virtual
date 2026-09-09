@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include "EjecutaInstruccion.h"
 #define IP 0
 #define OPC 1
 #define OP1 2
@@ -19,6 +20,14 @@
 #define CS 26
 #define DS 27
 #define MAX_MEMORIA 16384
+typedef struct 
+{
+    char mnemonico[5];
+    int codigo;
+}Operacion;
+
+typedef Operacion Operaciones[28];
+
 void inicializa_registros(int tabla_segmentos[], int registros[])
 {
     int i, j;
@@ -75,8 +84,8 @@ void main(char argc, char *argv[])
     int tabla_segmentos[8];
     int registros[32];
     char MP[MAX_MEMORIA];
+    Operaciones Mnemonicos;
     strcpy(nombreArch, argv[1]);
-    printf("Nombre archivo: %s", nombreArch);
-    leer_codigo(MP, tabla_segmentos, nombreArch);
-    inicializa_registros(tabla_segmentos, registros);
+    leer_codigo(MP,tabla_segmentos,nombreArch);
+        
 }
