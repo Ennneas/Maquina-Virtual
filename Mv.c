@@ -1,43 +1,37 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#define IP 0
-#define OPC 1
-#define OP1 2
-#define OP2 3
-#define LAR 4
-#define MAR 5
-#define MBR 6
-#define EAX 10
-#define EBX 11
-#define ECX 12
-#define EDX 13
-#define EEX 14
-#define EFX 15
-#define AC 16
-#define CC 17
-#define CS 26
-#define DS 27
-#define MAX_MEMORIA 16384
-typedef struct 
-{   
-    char mnemonico[5];
-    int codigo;
-}Operacion;
-void ejecuta_instruccion(char MP[],int registros[],int tabla_segmentos[],Operacion VMnemonicos[]){
+#include "Mv.h"
+int valida_instruccion (int opc,Tmnemonicos VMnemonicos,int *indice_Mnmenonico){
+    int i=0;
+    while (VMnemonicos[i].codigo!=op && i < CANT_MNE)
+        i++;
+    if (i < CANT_MNE)
+        *indice_Mnmenonico=i;
+    return (i < CANT_MNE);
+}
+void carga_operandos (int t1, int t2,int registros[],int MP[],int DireccionF){
+        int i,j;
+        for (i=0;i<t2;i++)
+            registros[OP2]+=MP[DireccionF+i] << 8*(t2-1-i); //Big-endian los bytes mas significativos se cargan primero
+        for (j=i;j<t1+t2;j++)//obra de tomy 
+            registros[OP1]+=MP[DireccionF+j] << 8*(t2-1-i);
+}  
+void ejecuta_instruccion(char MP[],int registros[],int tabla_segmentos[],Tmnemonicos VMnemonicos[]){
     char primer_byte;
-    int top1,top2,opc;
+    int top1,top2,opc,indice_Mnemonico;
     if (registros[IP] <= registros[DS] + (tabla_segmentos[0] & 0x00FF)) {//suponiendo que el CS siempre esta en el 0 de la tabla de segmentos 
         primer_byte=MP[registros[IP]];
-        top1=(primer_byte & 0b11000000);
-        top2=(primer_byte & 0b00110000);
-        opc=(primer_byte & 0b00011111);
-        if (!valida_operacion(opc,VMnemonicos))
-            printf("Operacion Invalida");//ERROR INSTRUCCION INVALIDA
-        else{
-            cargar_operandos(op1,op2,MP);
+        top2=(primer_byte & 0b11000000);//tipo de operando B
+        top1=(primer_byte & 0b00110000);//tipo de operando A
+        opc=(primer_byte & 0b00011111);//Codigo de Operacion
+        if (valida_instruccion(opc,VMnemonicos),&indice_Mnemonico){ //rompo con la programacion estructurada ajkajaj
+            carga_operandos(top1,top2,registros,MP,registros[IP]+1);
+            //copiar la instruccion completa para el disassembler
+            registros[IP]+=top1+top2+1;
+            VMnemonicos[indice_Mnemonico].ejecuta(top1,top2,registros,MP); //ejecuta la operacion correspondiente al codigo de operacion leido
+            
         }
-    }else//SEGMENTATION FAULT
+            //INTRUCCION INVALIDA
+    }
+        //SEGMENTATION FAULT
 }
 void inicializa_registros(int tabla_segmentos[], int registros[])
 {
@@ -45,6 +39,7 @@ void inicializa_registros(int tabla_segmentos[], int registros[])
     registros[CS]=tabla_segmentos[0] & 0xFF00;
     registros[DS]=tabla_segmentos[1] & 0xFF00;
     registros[IP]=tabla_segmentos[0] & 0xFF00;
+    registros[OP1]=registros[OP2]=0;
 }
 void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
 {
@@ -92,11 +87,11 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 void main(char argc, char *argv[])
 {
     char nombreArch[256];
-    int tabla_segmentos[8];
-    int registros[32];
+    int tabla_segmentos[TAM_TABLA];
+    int registros[CANT_REGS];
     char MP[MAX_MEMORIA];
-    Operacion VMnemonicos[28];
+    Tmnemonicos VMnemonicos[CANT_MNE];
     strcpy(nombreArch, argv[1]);
     leer_codigo(MP,tabla_segmentos,nombreArch);
-    
+    //ciclo de lectura hasta  SEGMENTATION FAULT???
 }
