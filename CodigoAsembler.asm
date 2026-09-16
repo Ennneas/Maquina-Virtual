@@ -1,10 +1,4 @@
-MOV [3], 'a'   
-MOV [2], 'l'
-MOV [1], 'o'
-MOV [0], 'H'
-MOV EDX, DS
-ADD EDX, 3
-LDH ECX, 1
-LDL ECX, 4
-MOV EAX, 0x12
-SYS 0x2
+MOV EAX, 5          ; registro <- inmediato (decimal)
+MOV EBX, 0x0A        ; registro <- inmediato (hexadecimal, 10)
+MOV ECX, 0b101       ; registro <- inmediato (binario, 5)
+MOV EDX, 'z'         ; registro <- inmediato (valor ASCII)

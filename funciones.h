@@ -1,6 +1,11 @@
 #ifndef funciones_h
 #define funciones_h
 #include "TIPOS.h"
+int busca_registro(int ,int []);
+void lee_memoria (int [],int [],char []);
+int valida_instruccion(int , Tmnemonicos [], int *);
+void carga_operandos(int , int , int [], char [], int );
+int Conversor_Memoria_Fisica(int [], int );
 void cargar_mnemonicos(Tmnemonicos []);
 void MOV(int , int , int [], char [],int []);
 void ADD(int , int , int [], char [],int []);
@@ -29,5 +34,4 @@ void JNP(int , int , int [], char [],int []);
 void JNN(int , int , int [], char [],int []);
 void JNZ(int , int , int [], char [],int []);
 void NOT(int , int , int [], char [],int []);
-void STOP(int , int , int [], char [],int []);
 #endif
