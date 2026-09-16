@@ -1,4 +1,24 @@
 #include "funciones.h"
+int busca_registro(int cod_reg,int registros[]){
+    int i=0;
+    while (cod_reg!=registros[i])
+        i++;
+    return i; //no se valida
+}
+void lee_memoria (int registros[],int tabla_segmentos[],char MP[]){
+    int valor;
+    registros[LAR] = registros[OP2] & 0x00FFFFFF; // LAR
+    registros[MAR] = 4 << 16;                   // MAR parte alta
+
+    direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[3]);
+    registros[MAR] |= direcF; // MAR parte baja
+    cant_bytes=registros[MAR] & 0xFFFF0000;
+    for (i = 0; i < cant_bytes; i++)
+    {
+        valor += MP[direcF + i] << (8 * (4 - 1 - i));
+    }
+    registros[MBR] = valor; // MBR = dato leído
+}   
 int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonico)
 {
     int i = 0;
@@ -11,10 +31,16 @@ int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonic
 void carga_operandos(int t1, int t2, int registros[], char MP[], int DireccionF)
 {
     int i, j;
-    for (i = 0; i < t2; i++)
-        registros[OP2] += MP[DireccionF + i] << 8 * (t2 - 1 - i); // Big-endian los bytes mas significativos se cargan primero
-    for (j = i; j < t1 + t2; j++)                                 // obra de tomy
+    for (i = 0; i < t2; i++){
+        registros[OP2]= registros[OP2] << 8;
+        registros[OP2] += MP[DireccionF + i];
+    }
+    registros[OP2]+= t2 << 24;
+    for (j = i; j < t1 + t2; j++){
         registros[OP1] += MP[DireccionF + j] << 8 * (t2 - 1 - i);
+    }
+    registros[OP1]+= t1 << <24;
+    
 }
 int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro){
     
@@ -143,48 +169,76 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
     vectormnemonico[26].ejecuta = NOT;
 }
 // ===== Dos operandos =====
-void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){ //afecta al registro CC
-    int i, direcF, valor_leido,registroescribir,pose,posl,registroleer;
+void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){ //afecta a CC
+    int i, direcF, valor_leido,registroescribir,pose,posl,registroleer,cant_bytes;
+    if (tipo1 == 3){//escribir en memoria 
+        if (tipo2==3){
+            lee_memoria(registros,tabla_segmentos,MP);
+            valor_leido=registros[MBR];
+        }else
+            if (tipo2 == 2)//inmediato
+                valor_leido =registros[OP2] & 0x00FFFFFF;
+            else{//registro
+                registroleer = registros[OP2] & 0b00000000000000000000000000011111;
+                posl = busca_registro(registroleer,registros); 
+                valor_leido = registros[posl];
+            }           
+        // --- escritura en OP1 (destino) ---
+        registros[LAR] = registros[OP1] & 0x00FFFFFF; // LAR
+        registros[MAR] = 4 << 16;                   //reset MAR
 
+        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[2]);
+        registros[MAR] |= direcF; // MAR parte baja
+        cant_bytes=registros[MAR] & 0xFFFF0000;
+        // MBR queda igual  
+        for (i = 0; i < cant_bytes; i++)
+        {
+            MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i)));//va escribiendo en memoria,big endian o little??
+        }
+    }else{//escribir en un registro
+        if (tipo2==3){
+            valor_leido=lee_memoria(registros[OP2],tabla_segmentos,MP);
+            valor_leido=registros[MBR];
+        }else
+            if (tipo2 == 2)//inmediato
+                valor_leido =registros[OP2] & 0x00FFFFFF;
+            else{//registro
+                registroleer = registros[OP2] & 0b00000000000000000000000000011111;
+                posl = busca_registro(registroleer,registro); 
+                valor_leido = registros[posl];
+            } 
+        registroescribir = registros[OP1] & 0b00000000000000000000000000011111;
+        pose = busca_registro(registroescribir,registro);
+        registros[pose] = valor_leido; 
+    }
+}
+void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){ //afecta al registro CC
+    int i, direcF, valor_leido,registroescribir,pose,posl,registroleer,cant_bytes;
     if (tipo1 == 3 || tipo2 == 3)
     {
-
         if (tipo1 == 3 && tipo2 == 3)
         {   
 
             registros[LAR] = registros[OP2] & 0x00FFFFFF; // LAR
             registros[MAR] = 4 << 16;                   // MAR parte alta
 
-            direcF = cambiodelogafis(tabla_segmentos, registros[3]);
+            direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[3]);
             registros[MAR] |= direcF; // MAR parte baja
-
             valor_leido = 0;
-            for (i = 0; i < 4; i++)
+            cant_bytes=registros[MAR] & 0xFFFF0000;
+            for (i = 0; i < cant_bytes; i++)
             {
                 valor_leido += MP[direcF + i] << (8 * (4 - 1 - i));
             }
             registros[MBR] = valor_leido; // MBR = dato leído
-
-            // --- escritura en OP1 (destino) ---
-            registros[LAR] = registros[OP1] & 0x00FFFFFF; // LAR
-            registros[MAR] = 4 << 16;                   //reset MAR
-
-            direcF = cambiodelogafis(tabla_segmentos, registros[2]);
-            registros[MAR] |= direcF; // MAR parte baja
-
-            // MBR queda igual 
-            for (i = 0; i < 4; i++)
-            {
-                MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i)));//va escribiendo en memoria,big endian o little??
-            }
         }
         else{
             if(tipo1 == 3){
                 if (tipo2 == 2)//inmediato
-                    valor_leido = 0x00FFFFFF;
+                    valor_leido =registros[OP2];
                 else{//registro
                     registroleer = registros[OP2] & 0b00000000000000000000000000011111;
-                    posl = buscarposregistro(registroleer); 
+                    posl = busca_registro(registroleer); 
                     valor_leido = registros[posl];
                 }
                 registros[LAR] = registros[OP1] & 0x00FFFFFF;//LAR
@@ -193,17 +247,19 @@ void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){
                 direcF = cambiodelogafis(tabla_segmentos, registros[2]);
                 registros[MAR]|= direcF;
 
+                cant_bytes=registros[MAR] & 0xFFFF0000;
+
                 registros[MBR] = valor_leido;//MBR
-                for (i = 0; i < 4; i++)
+                for (i = 0; i < cant_bytes; i++)
                 {
                     MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria
                 }
             }
             else{
-                registroescribir = registros[OP1] & 0b00000000000000000000000000011111;
+                
                 registros[LAR] = registros[3] & 0x00FFFFFF; // LAR
                 registros[MAR] = 4 << 16;                   // MAR ALTA
-                direcF = cambiodelogafis(tabla_segmentos, registros[OP2]);
+                direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[OP2]);
                 registros[MAR] |= direcF;
                 valor_leido = 0;
                 for (i = 0; i < 4; i++)
@@ -211,8 +267,7 @@ void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){
                     valor_leido += MP[direcF + i] << (8 * (4 - 1 - i));
                 }
                 registros[MBR] = valor_leido;
-                pose = buscaposregistro(registroescribir);
-                registros[pose] = valor_leido; 
+
             }
         }
     }

@@ -4,7 +4,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
 {
     char primer_byte;
     int top1, top2, opc, indice_Mnemonico,Memoria_fisica_IP=Conversor_Memoria_Fisica(tabla_segmentos,registros[IP]);
-    if (Memoria_fisica_IP)
+    if (Memoria_fisica_IP!=-1)
     { 
         primer_byte = MP[Memoria_fisica_IP];
         top2 = (primer_byte & 0b11000000); // tipo de operando B
@@ -18,14 +18,16 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         }
         else if (opc == 0x0F)
         { // instruccion STOP
-            Memoria_fisica_IP=-1;
+            registros[IP]=-1;
         }
-        else // INSTRUCCION INVALIDA
+        else{ // INSTRUCCION INVALIDA
             printf("instruccion :%x invalida", opc);
+            registros[IP]=-1;
+        }
     }
     else
     {
-        Memoria_fisica_IP = -1; // en el caso que no haya un stop
+        registros[IP]=-1; // en el caso que no haya un stop
         printf("\n SEGMENTATION FAULT");
     }
 }
