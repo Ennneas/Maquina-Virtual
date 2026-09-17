@@ -3,9 +3,9 @@
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[])
 {
     char primer_byte;
-    int top1, top2, opc, indice_Mnemonico,Memoria_fisica_IP=Conversor_Memoria_Fisica(tabla_segmentos,registros[IP]);
-    if (Memoria_fisica_IP!=-1)
-    { 
+    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
+    if (Memoria_fisica_IP != -1)
+    {
         primer_byte = MP[Memoria_fisica_IP];
         top2 = (primer_byte & 0b11000000); // tipo de operando B
         top1 = (primer_byte & 0b00110000); // tipo de operando A
@@ -16,33 +16,33 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
             registros[IP] += top1 + top2 + 1;
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
         }
-        else 
-            if (opc == 0x0F)
-                { // instruccion STOP
-                    registros[IP]=-1;
-                }
-            else{ // INSTRUCCION INVALIDA
-                printf("instruccion :%x invalida", opc);
-                registros[IP]=-1;
-            }
+        else if (opc == 0x0F)
+        { // instruccion STOP
+            registros[IP] = -1;
+        }
+        else
+        { // INSTRUCCION INVALIDA
+            printf("instruccion :%x invalida", opc);
+            registros[IP] = -1;
+        }
     }
     else
     {
-        registros[IP]=-1; // en el caso que no haya un stop
+        registros[IP] = -1; // en el caso que no haya un stop
         printf("\n SEGMENTATION FAULT");
     }
 }
-void inicializa_registros(int tabla_segmentos[], int registros[],int poscodes,int posdatas)
+void inicializa_registros(int tabla_segmentos[], int registros[], int poscodes, int posdatas)
 {
     int i, j;
     registros[CS] = (poscodes) << 16;
     registros[DS] = (posdatas) << 16;
-    registros[IP] =(poscodes) << 16;
-    printf ("CS %d DS %d IP",registros[CS],registros[DS],registros[IP]);
+    registros[IP] = (poscodes) << 16;
+    printf("CS %d DS %d IP %d  \n", registros[CS], registros[DS], registros[IP]);
 }
 void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
 {
-    int i = 2,ds=1,cs=0;
+    int i = 2, ds = 1, cs = 0;
     while (i < 7)
     {
         tabla_segmentos[i] = -1;
@@ -53,7 +53,7 @@ void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
 }
 void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 {
-    int i = 0, version, tamanioCS = 0, j = 0,k=0;
+    int i = 0, version, tamanioCS = 0, j = 0, k = 0;
     char x, identificador[6];
     FILE *Ar;
     Ar = fopen(nombreArch, "rb");
@@ -77,38 +77,38 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
                     tamanioCS += x;
                 }
             }
-            else 
-                if (strcmp(identificador, "VMX26") == 0 || version == 1) // agrego version es != 1 por las dudas
-                {
-                    MP[k]= x;
-                    k++;
-                }
-                else
-                    break;
+            else if (strcmp(identificador, "VMX26") == 0 && version == 1) // agrego version es != 1 por las dudas
+            {
+                MP[k] = x;
+                k++;
+            }
+            else
+                break;
             i++;
         }
     else
         printf("\n Archivo inexsistente ");
     if (i >= 8)
-    {   
+    {
         inicializar_tabla(tabla_segmentos, tamanioCS);
     }
     fclose(Ar);
 }
-int main(char argc, char *argv[])
+int main(int argc, char *argv[])
 {
     char nombreArch[256];
     int tabla_segmentos[TAM_TABLA];
-    int registros[CANT_REGS],l=0;
+    int registros[CANT_REGS], l = 0;
     char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
     strcpy(nombreArch, argv[1]);
-    printf("nombre arch: %s",nombreArch);
+    printf("nombre arch: %s", nombreArch);
     leer_codigo(MP, tabla_segmentos, nombreArch);
-    inicializa_registros(tabla_segmentos,registros,0,1);
+    inicializa_registros(tabla_segmentos, registros, 0, 1);
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)???
-    while (l<0x45){
-        printf("\n MP[%d]: %x",l,MP[l]);
+    while (l < 0x45)
+    {
+        printf("\n MP[%d]: %x", l, (unsigned char)MP[l]);
         l++;
     }
     while (registros[IP] != -1)
