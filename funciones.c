@@ -1,7 +1,7 @@
 #include "funciones.h"
-int busca_registro(int cod_reg,int registros[]){
+int busca_registro(int cod_reg,int registros[]){//esta mal, no se usa
     int i=0;
-    while (cod_reg!=registros[i])
+    while (cod_reg!=registros[i] && i<32 )
         i++;
     return i; //no se valida
 }
@@ -26,7 +26,7 @@ int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonic
         i++;
     if (i < CANT_MNE)
         *indice_Mnmenonico = i;
-    return i;
+    return (i < CANT_MNE);
 }
 void carga_operandos(int t1, int t2, int registros[], char MP[], int DireccionF)
 {
@@ -171,9 +171,10 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
     vectormnemonico[26].ejecuta = NOT;
 }
 // ===== Dos operandos =====
+
 void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){ //MOV MODULARIZADO
-    int i, direcF, valor_leido,registroescribir,pose,posl,registroleer,cant_bytes,resu_cc;
-    if (tipo1 == 3){//escribir en memoria 
+    int i, direcF, valor_leido,cod_registro,pose,posl,registroleer,cant_bytes,resu_cc;
+    if (tipo1 == 0b11){//escribir en memoria 
         if (tipo2==3){
             lee_memoria(registros,tabla_segmentos,MP);
             valor_leido=registros[MBR];
@@ -198,85 +199,26 @@ void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){
             MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i)));//va escribiendo en memoria,big endian o little??
         }
     }else{//escribir en un registro
-        if (tipo2==3){
+        printf("\n TOMAS DI SANTOS");
+        if (tipo2==0b11){
             lee_memoria(registros,tabla_segmentos,MP);
             valor_leido=registros[MBR];
         }else
-            if (tipo2 == 2)//inmediato
+            if (tipo2 == 0b10){//inmediato
                 valor_leido =registros[OP2] & 0x00FFFFFF;
-            else{//registro
+            }else{//registro
                 registroleer = registros[OP2] & 0b00000000000000000000000000011111;
                 posl = busca_registro(registroleer,registros); 
                 valor_leido = registros[posl];
             } 
-        registroescribir = registros[OP1] & 0b00000000000000000000000000011111;
-        pose = busca_registro(registroescribir,registros);
-        registros[pose] = valor_leido; 
+        cod_registro= registros[OP1] & 0b00000000000000000000000000011111;
+        //pose = busca_registro(cod_registro,registros); CAMBIAR POR VALIDAION??? QUIZAS, POR SI TE METEN UN EGX
+        registros[cod_registro] = valor_leido; 
+        printf("\nlicha");
     }
 }
-/*
-void MOV(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[]){ //afecta al registro CC
-    int i, direcF, valor_leido,registroescribir,pose,posl,registroleer,cant_bytes;
-    if (tipo1 == 3 || tipo2 == 3)
-    {
-        if (tipo1 == 3 && tipo2 == 3)
-        {   
-
-            registros[LAR] = registros[OP2] & 0x00FFFFFF; // LAR
-            registros[MAR] = 4 << 16;                   // MAR parte alta
-
-            direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[3]);
-            registros[MAR] |= direcF; // MAR parte baja
-            valor_leido = 0;
-            cant_bytes=registros[MAR] & 0xFFFF0000;
-            for (i = 0; i < cant_bytes; i++)
-            {
-                valor_leido += MP[direcF + i] << (8 * (4 - 1 - i));
-            }
-            registros[MBR] = valor_leido; // MBR = dato leído
-        }
-        else{
-            if(tipo1 == 3){
-                if (tipo2 == 2)//inmediato
-                    valor_leido =registros[OP2];
-                else{//registro
-                    registroleer = registros[OP2] & 0b00000000000000000000000000011111;
-                    posl = busca_registro(registroleer); 
-                    valor_leido = registros[posl];
-                }
-                registros[LAR] = registros[OP1] & 0x00FFFFFF;//LAR
-                registros[MAR] = 4 << 16;//MAR ALTA
-                direcF = cambiodelogafis(tabla_segmentos, registros[2]);
-                registros[MAR]|= direcF;
-
-                cant_bytes=registros[MAR] & 0xFFFF0000;
-
-                registros[MBR] = valor_leido;//MBR
-                for (i = 0; i < cant_bytes; i++)
-                {
-                    MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria
-                }
-            }
-            else{
-                
-                registros[LAR] = registros[3] & 0x00FFFFFF; // LAR
-                registros[MAR] = 4 << 16;                   // MAR ALTA
-                direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[OP2]);
-                registros[MAR] |= direcF;
-                valor_leido = 0;
-                for (i = 0; i < 4; i++)
-                {
-                    valor_leido += MP[direcF + i] << (8 * (4 - 1 - i));
-                }
-                registros[MBR] = valor_leido;
-
-            }
-        }
-    }
-}
-*/
 void ADD(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[] ){//afecta al registro CC
-    int i, direcF, valor_leido,registroescribir,pose,posl,registroleer,cant_bytes,valor_base_memoria,resu_cc;
+    int i, direcF, valor_leido,cod_registro,pose,posl,registroleer,cant_bytes,valor_base_memoria,resu_cc;
     if (tipo1 == 3){//escribir en memoria 
         if (tipo2==3){
             lee_memoria(registros,tabla_segmentos,MP);
@@ -319,8 +261,8 @@ void ADD(int tipo1, int tipo2, int registros[],char MP[],int tabla_segmentos[] )
                 posl = busca_registro(registroleer,registros); 
                 valor_leido = registros[posl];
             } 
-        registroescribir = registros[OP1] & 0b00000000000000000000000000011111;
-        pose = busca_registro(registroescribir,registros);
+        cod_registro = registros[OP1] & 0b00000000000000000000000000011111;
+        pose = busca_registro(cod_registro,registros);
         resu_cc=registros[pose] = registros[pose]+valor_leido; 
     }
     //modificaCC(resucc,registros);

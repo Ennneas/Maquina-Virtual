@@ -7,13 +7,14 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
-        top2 = (primer_byte & 0b11000000); // tipo de operando B
-        top1 = (primer_byte & 0b00110000); // tipo de operando A
+        top2 = (primer_byte & 0b11000000)>>6; // tipo de operando B
+        top1 = (primer_byte & 0b00110000)>>4; // tipo de operando A
         opc = (primer_byte & 0b00011111);  // Codigo de Operacion
         if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico))
         { // rompo con la programacion estructurada ajkajaj
             carga_operandos(top1, top2, registros, MP, registros[IP] + 1);
             registros[IP] += top1 + top2 + 1;
+            printf("\n indice:%d",indice_Mnemonico);
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
         }
         else if (opc == 0x0F)
@@ -22,7 +23,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         }
         else
         { // INSTRUCCION INVALIDA
-            printf("instruccion :%x invalida", opc);
+            printf("\n instruccion :%x invalida", opc);
             registros[IP] = -1;
         }
     }
@@ -35,10 +36,9 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
 void inicializa_registros(int tabla_segmentos[], int registros[], int poscodes, int posdatas)
 {
     int i, j;
-    registros[CS] = (poscodes) << 16;
-    registros[DS] = (posdatas) << 16;
-    registros[IP] = (poscodes) << 16;
-    printf("CS %d DS %d IP %d  \n", registros[CS], registros[DS], registros[IP]);
+    registros[CS] = poscodes << 16;
+    registros[DS] = posdatas << 16; 
+    registros[IP] = poscodes << 16 ;
 }
 void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
 {
@@ -102,19 +102,14 @@ int main(int argc, char *argv[])
     char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
     strcpy(nombreArch, argv[1]);
-    printf("nombre arch: %s", nombreArch);
     leer_codigo(MP, tabla_segmentos, nombreArch);
-    inicializa_registros(tabla_segmentos, registros, 0, 1);
-    // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)???
-    while (l < 0x45)
-    {
-        printf("\n MP[%d]: %x", l, (unsigned char)MP[l]);
-        l++;
-    }
+    inicializa_registros(tabla_segmentos, registros,0,1);
+    cargar_mnemonicos(VMnemonicos);
+    // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos);
-    printf("EAX: %d\n", registros[EAX]);
-    printf("EBX: %d\n", registros[EBX]);
-    printf("EEX: %d\n", registros[EDX]);
+    printf("\nEAX: %d\n", registros[EAX]);
+    printf("EBX: %x\n", registros[EBX]);
+    printf("EDX: %c\n", registros[EDX]);
     return 0;
 }
