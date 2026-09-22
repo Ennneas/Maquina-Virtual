@@ -14,7 +14,6 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         { // rompo con la programacion estructurada ajkajaj
             carga_operandos(top1, top2, registros, MP, registros[IP] + 1);
             registros[IP] += top1 + top2 + 1;
-            printf("\n indice:%d",indice_Mnemonico);
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
         }
         else if (opc == 0x0F)
@@ -48,6 +47,7 @@ void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
         tabla_segmentos[i] = -1;
         i++;
     }
+    printf("\nTAMANIO:%d",tamanioCS);
     tabla_segmentos[cs] = tamanioCS;                                     // siempre que el cs este en la pos 0 de la tabla
     tabla_segmentos[ds] = tamanioCS << 16 | ((MAX_MEMORIA - tamanioCS)); // Asigno los 2 bytes mas significativos del tamaño a la base del DS y en los 2 menos significativos su tamaño
 }
@@ -108,8 +108,8 @@ int main(int argc, char *argv[])
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos);
-    printf("\nEAX: %d\n", registros[EAX]);
-    printf("EBX: %x\n", registros[EBX]);
-    printf("EDX: %c\n", registros[EDX]);
+    printf("\nEAX: %x\n", registros[EAX]);
+    printf("EDX: %x\n", registros[EDX]);
+    printf("EFX: %x\n", registros[EFX]);
     return 0;
 }

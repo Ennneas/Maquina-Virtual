@@ -1,5 +1,8 @@
 MOV EAX, 5          ; registro <- inmediato (decimal)
-OTRO: MOV EBX, 0x0A        ; registro <- inmediato (hexadecimal, 10)
-MOV ECX, 0b101       ; registro <- inmediato (binario, 5)
-MOV EDX, 'z'         ; registro <- inmediato (valor ASCII)
-JP OTRO
+MOV [3], 3        ; registro <- inmediato (hexadecimal, 10)
+MOV [2], 2
+MOV [1], 1
+MOV EBX ,[2]
+MOV EDX, 2
+MOV EFX ,[3] 
+STOP

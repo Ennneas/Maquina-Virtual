@@ -2,11 +2,14 @@
 #define funciones_h
 #include "TIPOS.h"
 int busca_registro(int ,int []);
-void lee_memoria (int [],int [],char []);
+void lee_memoria (int ,int [],int [],char []);
 int valida_instruccion(int , Tmnemonicos [], int *);
 void carga_operandos(int , int , int [], char [], int );
 int Conversor_Memoria_Fisica(int [], int );
 void cargar_mnemonicos(Tmnemonicos []);
+int lectura (int ,int ,int [],int [],char []);
+void escritura (int ,int [],int [],char [],int );
+void actualizaCC(int [], int , int);
 void MOV(int , int , int [], char [],int []);
 void ADD(int , int , int [], char [],int []);
 void SUB(int , int , int [], char [],int []);
