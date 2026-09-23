@@ -46,6 +46,7 @@ void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
         tabla_segmentos[i] = -1;
         i++;
     }
+    printf("TAMANOIO:%x",tamanioCS);
     tabla_segmentos[cs] = tamanioCS;                                     // siempre que el cs este en la pos 0 de la tabla
     tabla_segmentos[ds] = tamanioCS << 16 | ((MAX_MEMORIA - tamanioCS)); // Asigno los 2 bytes mas significativos del tamaño a la base del DS y en los 2 menos significativos su tamaño
 }
