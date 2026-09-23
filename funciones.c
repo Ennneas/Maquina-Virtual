@@ -442,45 +442,96 @@ void RND(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]
 void SYS(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[])
 {
 }
-
-void JMP(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[])
+void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) //Lee el operando 2 al ser una funcion de un solo operando
 {
-    void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
-    }
+    unsigned int direccion_salto;
+    direccion_salto = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
+    registros[IP] = (registros[CS] & 0xFFFF0000) | (direccion_salto & 0x0000FFFF);
+}
 
-    void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, N, Z;
+    bits_control = registros[CC] >> 28;
+    N = ((bits_control) & 0b1000) >> 3;
+    Z = ((bits_control) & 0b0100) >> 2;
+    if (!N && !Z){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, N;
+    bits_control = registros[CC] >> 28;
+    N = ((bits_control) & 0b1000) >> 3;
+    if (N){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void JZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, Z;
+    bits_control = registros[CC] >> 28;
+    Z = ((bits_control) & 0b0100) >> 2;
+    if (Z){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void JC(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
-    }
 
-    void JV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JC(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, C;
+    bits_control = registros[CC] >> 28;
+    C = ((bits_control) & 0b0010) >> 1;
+    if (C){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void JNP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, V;
+    bits_control = registros[CC] >> 28;
+    V = ((bits_control) & 0b0001);
+    if (V){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void JNN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JNP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, N, Z;
+    bits_control = registros[CC] >> 28;
+    N = ((bits_control) & 0b1000) >> 3;
+    Z = ((bits_control) & 0b0100) >> 2;
+    if (N || Z){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
+void JNN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, N;
+    bits_control = registros[CC] >> 28;
+    N = ((bits_control) & 0b1000) >> 3;
+    if (!N){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
 
-    void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    { // afecta al registro CC
+void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    unsigned int bits_control, Z;
+    bits_control = registros[CC] >> 28;
+    Z = ((bits_control) & 0b0100) >> 2;
+    if (!Z){
+        JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+}
+
+void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{ // afecta al registro CC
+}
