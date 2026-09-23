@@ -62,18 +62,23 @@ void carga_operandos(int t1, int t2, int registros[], char MP[], int DireccionF)
     registros[OP1]|= t1 << 24;
     
 }
-int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro){
+int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro) {
     
     int offset = registro & 0x0000FFFF;
-    int pos = (registro & 0xFFFF0000) >> 16;
-    int direccionbase = (tabla_segmentos[pos] & 0xFFFF0000) >> 16;
+    int pos = ((unsigned int)registro & 0xFFFF0000) >> 16;
+
+    if (pos < 0 || pos >= TAM_TABLA || tabla_segmentos[pos] == -1)
+        return -1; 
+    
+    int direccionbase = ((unsigned int)tabla_segmentos[pos] & 0xFFFF0000) >> 16;
+    int limite = tabla_segmentos[pos] & 0x0000FFFF; // Tamaño del segmento
 
     int direccionfisica = direccionbase + offset;
 
-    if(direccionfisica <= direccionbase + direccionbase + tabla_segmentos[pos] & 0x0000FFFF)
+    if (offset < limite)
         return direccionfisica;
     else
-        return -1;
+        return -1; 
 }
 int lectura (int tipo,int OP,int registros[],int tabla_segmentos[],char MP[]){
     int posl,registroleer;
