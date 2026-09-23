@@ -430,6 +430,7 @@ void RND(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]
 }
 
 // ===== Un operando =====
+<<<<<<< Updated upstream
 void SYS(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
 {
 }
@@ -438,40 +439,188 @@ void JMP(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]
 
 }
 void JMP(int tipo1, int tipo2, int registros[],unsigned char MP[],int tabla_segmentos[] ){
+=======
+// Traduce dir_logica a fisica, seteando LAR/MAR como el resto de las instrucciones,
+// y devuelve la direccion fisica (o -1 si hay fallo de segmento)
+int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segmentos[])
+{
+    int direccion_fisica;
+    registros[LAR] = dir_logica;
+    registros[MAR] = tam << 16; // parte alta = cantidad de bytes
+    direccion_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    if (direccion_fisica != -1)
+        registros[MAR] |= direccion_fisica; // parte baja
+    return direccion_fisica;
 }
 
-    void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
-    }
+int mascara(int tam)
+{
+    if (tam == 1)
+        return 0xFF;
+    if (tam == 2)
+        return 0xFFFF;
+    if (tam == 3)
+        return 0xFFFFFF;
+    return 0xFFFFFFFF;
+}
 
-    void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
-    }
+void escribe_binario(int valor, int tam)
+{
+    int i;
+    printf("0b");
+    for (i = tam * 8 - 1; i >= 0; i--)
+        printf("%d", (valor >> i) & 1);
+    printf(" ");
+}
 
-    void JZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+void escribe_caracteres(int valor, int tam)
+{
+    int i;
+    unsigned char c;
+    for (i = tam - 1; i >= 0; i--)
     {
+        c = (valor >> (8 * i)) & 0xFF;
+        printf("%c", (c >= 32 && c < 127) ? c : '.');
     }
+    printf(" ");
+}
 
-    void JC(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+void sys_write(int dir_log, int cant, int tam, int modo, int registros[], int tabla_segmentos[], unsigned char MP[])
+{
+    int i, j, direccion_fisica, valor;
+
+    for (i = 0; i < cant; i++)
     {
-    }
+        direccion_fisica = traduce_y_setea_MAR(dir_log + i * tam, tam, registros, tabla_segmentos);
+        if (direccion_fisica == -1)
+        {
+            printf("\nError: fallo de segmento");
+            registros[IP] = -1;
+            return;
+        }
 
-    void JV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+        valor = 0;
+        for (j = 0; j < tam; j++)
+            valor = (valor << 8) | MP[direccion_fisica + j];
+        registros[MBR] = valor;
+
+        printf("\n[%04X]: ", direccion_fisica);
+        if (modo & 0x10)
+            escribe_binario(valor, tam);
+        if (modo & 0x08)
+            printf("0x%0*X ", tam * 2, valor & mascara(tam));
+        if (modo & 0x04)
+            printf("0o%o ", valor & mascara(tam));
+        if (modo & 0x02)
+            escribe_caracteres(valor, tam);
+        if (modo & 0x01)
+            printf("%d ", valor);
+    }
+}
+
+void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tabla_segmentos[], unsigned char MP[])
+{
+    int i, j, direccion_fisica, valor;
+
+    for (i = 0; i < cant; i++)
     {
-    }
+        direccion_fisica = traduce_y_setea_MAR(dir_log + i * tam, tam, registros, tabla_segmentos);
+        if (direccion_fisica == -1)
+        {
+            printf("\nError: fallo de segmento");
+            registros[IP] = -1;
+            return;
+        }
 
-    void JNP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+        printf("\n[%04X]: ", direccion_fisica);
+        if (modo & 0x10)
+            scanf("%i", &valor);
+        else if (modo & 0x08)
+            scanf("%x", &valor);
+        else if (modo & 0x04)
+            scanf("%o", &valor);
+        else if (modo & 0x02)
+        {
+            char c;
+            scanf(" %c", &c);
+            valor = c;
+        }
+        else
+            scanf("%d", &valor);
+
+        registros[MBR] = valor;
+        for (j = 0; j < tam; j++)
+            MP[direccion_fisica + j] = (valor >> (8 * (tam - 1 - j))) & 0xFF;
+    }
+}
+
+void SYS(int tipo1, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    int llamada = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
+    int modo = registros[EAX];
+    int cant = registros[ECX] & 0x0000FFFF;        // cantidad de celdas
+    int tam = (registros[ECX] >> 16) & 0x0000FFFF; // tamaño de c/celda
+    int dir_log = registros[EDX];                  // puntero inicial
+
+    if (llamada == 1)
+        sys_read(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
+    else if (llamada == 2)
+        sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
+    else
     {
+        printf("\nLlamada al sistema invalida");
+        registros[IP] = -1;
     }
+}
 
-    void JNN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    {
-    }
+void JMP(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]) {}
 
+void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+>>>>>>> Stashed changes
+}
+
+void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JC(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JNP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JNN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+}
+
+<<<<<<< Updated upstream
     void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
     {
     }
 
 void NOT(int tipo1, int tipo2, int registros[],unsigned char MP[],int tabla_segmentos[] ){//afecta al registro CC
 
+=======
+void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{ // afecta al registro CC
+>>>>>>> Stashed changes
 }
