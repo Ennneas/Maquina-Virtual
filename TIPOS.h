@@ -24,7 +24,7 @@
 #define CANT_REGS 32
 #define CANT_MNE 27
 #define MAX_MEMORIA 16384
-typedef void (* Pfunsion)(int ,int ,int[],char [],int []);
+typedef void (* Pfunsion)(int ,int ,int[],unsigned char [],int []);
 typedef struct 
 {   
     char mnemonico[5];

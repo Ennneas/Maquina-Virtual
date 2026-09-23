@@ -10,8 +10,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         top2 = (primer_byte & 0b11000000)>>6; // tipo de operando B
         top1 = (primer_byte & 0b00110000)>>4; // tipo de operando A
         opc = (primer_byte & 0b00011111);  // Codigo de Operacion
-        if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico))
-        { // rompo con la programacion estructurada ajkajaj
+        if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico)){ // rompo con la programacion estructurada ajkajaj
             carga_operandos(top1, top2, registros, MP, registros[IP] + 1);
             registros[IP] += top1 + top2 + 1;
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
@@ -47,7 +46,6 @@ void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
         tabla_segmentos[i] = -1;
         i++;
     }
-    printf("\nTAMANIO:%d",tamanioCS);
     tabla_segmentos[cs] = tamanioCS;                                     // siempre que el cs este en la pos 0 de la tabla
     tabla_segmentos[ds] = tamanioCS << 16 | ((MAX_MEMORIA - tamanioCS)); // Asigno los 2 bytes mas significativos del tamaño a la base del DS y en los 2 menos significativos su tamaño
 }
@@ -98,8 +96,8 @@ int main(int argc, char *argv[])
 {
     char nombreArch[256];
     int tabla_segmentos[TAM_TABLA];
-    int registros[CANT_REGS], l = 0;
-    char MP[MAX_MEMORIA];
+    int registros[CANT_REGS];
+    unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
     strcpy(nombreArch, argv[1]);
     leer_codigo(MP, tabla_segmentos, nombreArch);
@@ -108,8 +106,5 @@ int main(int argc, char *argv[])
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos);
-    printf("\nEAX: %x\n", registros[EAX]);
-    printf("EDX: %x\n", registros[EDX]);
-    printf("EFX: %x\n", registros[EFX]);
     return 0;
 }

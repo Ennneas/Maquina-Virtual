@@ -1,8 +1,9 @@
-MOV EAX, 5          ; registro <- inmediato (decimal)
-MOV [3], 3        ; registro <- inmediato (hexadecimal, 10)
-MOV [2], 2
-MOV [1], 1
-MOV EBX ,[2]
-MOV EDX, 2
-MOV EFX ,[3] 
+MOV [4], 99
+MOV [3], 'a'
+MOV [2], 'l'
+MOV [1], 'o'
+MOV [DS], 'H'
+MOV EDX, DS
+MOV [EDX+4],25
+MOV EBX , [EDX+4]
 STOP
