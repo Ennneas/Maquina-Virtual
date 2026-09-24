@@ -16,24 +16,25 @@ void actualiza_CC(int registros[], long long int resu_ope, int valor)
     if (((resu_ope >> 32) == 1) && (resu_ope != valor)) // PREGUNTAR BIEN COMO ES EL DESBORDAMIENTO Y COMO IMPLEMENTAR LA SOLUCION
         V = 1;
 }
-void lee_memoria (int OP,int registros[],int tabla_segmentos[],unsigned char MP[]){
-    int Direccion_Fisica,valor,i,offset,Dire_logica;
-    offset= (registros[OP] & 0x00FFFF00)>>8;
-    Dire_logica= registros [registros[OP] & 0b00000000000000000000000000011111];
-    Dire_logica+=offset; 
+void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char MP[])
+{
+    int Direccion_Fisica, valor, i, offset, Dire_logica;
+    offset = (registros[OP] & 0x00FFFF00) >> 8;
+    Dire_logica = registros[registros[OP] & 0b00000000000000000000000000011111];
+    Dire_logica += offset;
 
-    registros[LAR] = Dire_logica; 
-    registros[MAR] = 4 << 16;                   // MAR parte alta
-    
-    Direccion_Fisica= Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
-    registros[MAR]|= Direccion_Fisica; // MAR parte baja
+    registros[LAR] = Dire_logica;
+    registros[MAR] = 4 << 16; // MAR parte alta
+
+    Direccion_Fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    registros[MAR] |= Direccion_Fisica; // MAR parte baja
 
     registros[MBR] = 0;
-    for (i = 0; i < (registros[MAR] & 0xFFFF0000)>>16 ; i++)
+    for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
     {
-        registros[MBR]+= MP[Direccion_Fisica + i] << (8 * (4 - 1 - i));
+        registros[MBR] += MP[Direccion_Fisica + i] << (8 * (4 - 1 - i));
     }
-}   
+}
 int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonico)
 {
     int i = 0;
@@ -43,7 +44,7 @@ int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonic
         *indice_Mnmenonico = i;
     return (i < CANT_MNE);
 }
-void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int DireccionF)
+void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int DireccionF, char instrucomp[])
 {
     int i, j;
     registros[OP1] = registros[OP2] = 0;
@@ -51,13 +52,16 @@ void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int Di
     {
         registros[OP2] = registros[OP2] << 8;
         registros[OP2] += MP[DireccionF + i];
+        instrucomp[i] = MP[DireccionF + i];
     }
     registros[OP2] += (t2 << 24);
     for (j = i; j < t1 + t2; j++)
     {
         registros[OP1] = registros[OP1] << 8;
         registros[OP1] += MP[DireccionF + j];
+        instrucomp[j] = MP[DireccionF + j];
     }
+    instrucomp[j + 1] = "\0";
     registros[OP1] |= t1 << 24;
 }
 int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro)
@@ -208,34 +212,46 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
     vectormnemonico[26].ejecuta = NOT;
 }
 // ===== Dos operandos =====
-void escritura (int tipo,int registros[],int tabla_segmentos[],unsigned char MP[],int valor_leido){
+<<<<<<< HEAD
+void escritura(int tipo, int registros[], int tabla_segmentos[], unsigned char MP[], int valor_leido)
+{
+    int direcF, cod_registro, i, offset, base;
+    if (tipo == 3)
+    {
+        offset = (registros[OP1] & 0x00FFFF00);
+        offset = offset >> 8;
+        registros[LAR] = registros[registros[OP1] & 0b00000000000000000000000000011111] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
+        registros[MAR] = 4 << 16;                                                                 // reset MAR
+=======
+void escritura (int tipo, int OP, int registros[],int tabla_segmentos[],unsigned char MP[],int valor_leido){
     int direcF,cod_registro,i,offset,base;
     if (tipo==3){             
-        offset= (registros[OP1] & 0x00FFFF00);
+        offset= (registros[OP] & 0x00FFFF00);
         offset= offset >> 8;
-        registros[LAR] = registros [registros[OP1] & 0b00000000000000000000000000011111] + offset ; // a la direccion logica del registro del OPERANDO le agrego el offset
+        registros[LAR] = registros [registros[OP] & 0b00000000000000000000000000011111] + offset ; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = 4 << 16;                   //reset MAR
+>>>>>>> 0daf1de7e433a16ff83d8e0900b0beb372e6edd1
         direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
         registros[MAR] |= direcF; // MAR parte baja
-        for (i = 0; i < (registros[MAR] & 0xFFFF0000)>>16 ; i++)
+        for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
         {
             MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria,big endian o little??
         }
     }
     else
     {
-        cod_registro = registros[OP1] & 0b00000000000000000000000000011111;
+        cod_registro = registros[OP] & 0b00000000000000000000000000011111;
         registros[cod_registro] = valor_leido;
     }
 }
-void MOV(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void MOV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // MOV MODULARIZADO
     int valor_leido;
     valor_leido = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
-    escritura(tipo1, registros, tabla_segmentos, MP, valor_leido);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, valor_leido);
     actualiza_CC(registros, valor_leido, valor_leido);
 }
-void ADD(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void ADD(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, suma;
     long long int resu_ope;
@@ -243,11 +259,11 @@ void ADD(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resu_ope = (long long int)valor1 + (long long int)valor2;
     suma = (int)resu_ope;
-    escritura(tipo1, registros, tabla_segmentos, MP, suma);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, suma);
     actualiza_CC(registros, resu_ope, suma);
     // modificaCC(resucc,registros);
 }
-void SUB(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void SUB(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, resta;
     long long int resu_ope;
@@ -255,11 +271,11 @@ void SUB(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resu_ope = (long long int)valor1 - (long long int)valor2;
     resta = (int)resu_ope;
-    escritura(tipo1, registros, tabla_segmentos, MP, resta);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resta);
     actualiza_CC(registros, resu_ope, resta);
 }
 
-void MUL(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void MUL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, multi;
     long long int resu_ope;
@@ -267,11 +283,11 @@ void MUL(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resu_ope = (long long int)valor1 * (long long int)valor2;
     multi = (int)resu_ope;
-    escritura(tipo1, registros, tabla_segmentos, MP, multi);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, multi);
     actualiza_CC(registros, resu_ope, multi);
 }
 
-void DIV(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void DIV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, div, resto;
     long long int resu_ope;
@@ -283,7 +299,7 @@ void DIV(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
         resto = valor1 % valor2;
         registros[AC] = resto;
         div = (int)resu_ope;
-        escritura(tipo1, registros, tabla_segmentos, MP, div);
+        escritura(tipo1, OP1, registros, tabla_segmentos, MP, div);
         actualiza_CC(registros, resu_ope, div);
     }
     else
@@ -292,7 +308,7 @@ void DIV(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
         registros[IP] = -1;
     }
 }
-void CMP(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void CMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, resta;
     long long int resu_ope;
@@ -304,39 +320,39 @@ void CMP(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
     actualiza_CC(registros, resu_ope, resta);
 }
 
-void AND(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void AND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
 
     int valor1, valor2, resAnd;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resAnd = valor1 & valor2;
-    escritura(tipo1, registros, tabla_segmentos, MP, resAnd);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resAnd);
     actualiza_CC(registros, resAnd, resAnd); // sin "resu_ope" de 64 bits, no aplica acá
 }
 
-void OR(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void OR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
 
     int valor1, valor2, resor;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resor = valor1 | valor2;
-    escritura(tipo1, registros, tabla_segmentos, MP, resor);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resor);
     actualiza_CC(registros, resor, resor);
 }
 
-void XOR(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void XOR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, resxor;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resxor = valor1 ^ valor2;
-    escritura(tipo1, registros, tabla_segmentos, MP, resxor);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resxor);
     actualiza_CC(registros, resxor, resxor);
 }
 
-void SWAP(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[])
+void SWAP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     int valorA, valorB, resxor;
 
@@ -344,42 +360,42 @@ void SWAP(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[
     valorB = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
 
     resxor = valorA ^ valorB; // XOR A, B  -> A
-    escritura(tipo1, registros, tabla_segmentos, MP, resxor);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resxor);
     valorA = resxor;
 
     resxor = valorB ^ valorA; // XOR B, A  -> B
-    escritura(tipo2, registros, tabla_segmentos, MP, resxor);
+    escritura(tipo2, OP2, registros, tabla_segmentos, MP, resxor);
     valorB = resxor;
 
     resxor = valorA ^ valorB; // XOR A, B  -> A
-    escritura(tipo1, registros, tabla_segmentos, MP, resxor);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resxor);
 
     actualiza_CC(registros, resxor, resxor); // CC según el último XOR
 }
 
-void SHL(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]) // PREGUNTAR como es cc con los shift
+void SHL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // PREGUNTAR como es cc con los shift
 {                                                                                 // afecta al registro CC
     int valor1, valor2, shleft;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     shleft = valor1 << valor2;
 
-    escritura(tipo1, registros, tabla_segmentos, MP, shleft);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, shleft);
     actualiza_CC(registros, shleft, shleft);
 }
 
-void SHR(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void SHR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, shright;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     shright = (int)((unsigned int)valor1 >> valor2);
 
-    escritura(tipo1, registros, tabla_segmentos, MP, shright);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, shright);
     actualiza_CC(registros, shright, shright);
 }
 
-void SAR(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_segmentos[])
+void SAR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, saright;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -387,11 +403,11 @@ void SAR(int tipo1, int tipo2, int registros[],unsigned char MP[], int tabla_seg
 
     saright = valor1 >> valor2;
 
-    escritura(tipo1, registros, tabla_segmentos, MP, saright);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, saright);
     actualiza_CC(registros, saright, saright);
 }
 
-void LDL(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[])
+void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -399,23 +415,23 @@ void LDL(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]
 
     resultado = (valor1 & 0x0000FFFF) | (valor2 & 0x0000FFFF);
 
-    escritura(tipo1, registros, tabla_segmentos, MP, resultado);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
     actualiza_CC(registros, resultado, resultado);
 }
 
-void LDH(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[])
+void LDH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
 
-    resultado = (valor1 & 0xFFFF0000) | ((valor2 & 0x0000FFFF) << 16);
+    resultado = (valor1 & 0xFFFF0000) | ((valor2 & 0xFFFF0000) << 16);
 
-    escritura(tipo1, registros, tabla_segmentos, MP, resultado);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
     actualiza_CC(registros, resultado, resultado);
 }
 
-void RND(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[])
+void RND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -425,15 +441,18 @@ void RND(int tipo1, int tipo2, int registros[], char MP[], int tabla_segmentos[]
     else
         resultado = 0; // por las dudas, si viene un valor negativo mal formado
 
-    escritura(tipo1, registros, tabla_segmentos, MP, resultado);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
     actualiza_CC(registros, resultado, resultado);
 }
 
 // ===== Un operando =====
+<<<<<<< Updated upstream
 
-// Traduce dir_logica a fisica, seteando LAR/MAR como el resto de las instrucciones,
-// y devuelve la direccion fisica (o -1 si hay fallo de segmento)
-int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segmentos[])
+== == == =
+>>>>>>> Stashed changes
+             // Traduce dir_logica a fisica, seteando LAR/MAR como el resto de las instrucciones,
+             // y devuelve la direccion fisica (o -1 si hay fallo de segmento)
+    int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segmentos[])
 {
     int direccion_fisica;
     registros[LAR] = dir_logica;
@@ -545,7 +564,7 @@ void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tab
     }
 }
 
-void SYS(int tipo1, int registros[], unsigned char MP[], int tabla_segmentos[])
+void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     int llamada = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     int modo = registros[EAX];
@@ -564,7 +583,7 @@ void SYS(int tipo1, int registros[], unsigned char MP[], int tabla_segmentos[])
     }
 }
 
-void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) //Lee el operando 2 al ser una funcion de un solo operando
+void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // Lee el operando 2 al ser una funcion de un solo operando
 {
     unsigned int direccion_salto;
     direccion_salto = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -573,13 +592,17 @@ void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 
 void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
+<<<<<<< Updated upstream
     unsigned int bits_control, N, Z;
     bits_control = registros[CC] >> 28;
     N = ((bits_control) & 0b1000) >> 3;
     Z = ((bits_control) & 0b0100) >> 2;
-    if (!N && !Z){
+    if (!N && !Z)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
+    == == == =
+>>>>>>> Stashed changes
 }
 
 void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
@@ -587,7 +610,8 @@ void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_seg
     unsigned int bits_control, N;
     bits_control = registros[CC] >> 28;
     N = ((bits_control) & 0b1000) >> 3;
-    if (N){
+    if (N)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
 }
@@ -597,18 +621,19 @@ void JZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_seg
     unsigned int bits_control, Z;
     bits_control = registros[CC] >> 28;
     Z = ((bits_control) & 0b0100) >> 2;
-    if (Z){
+    if (Z)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
 }
-
 
 void JC(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     unsigned int bits_control, C;
     bits_control = registros[CC] >> 28;
     C = ((bits_control) & 0b0010) >> 1;
-    if (C){
+    if (C)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
 }
@@ -618,7 +643,8 @@ void JV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_seg
     unsigned int bits_control, V;
     bits_control = registros[CC] >> 28;
     V = ((bits_control) & 0b0001);
-    if (V){
+    if (V)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
 }
@@ -629,7 +655,8 @@ void JNP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     bits_control = registros[CC] >> 28;
     N = ((bits_control) & 0b1000) >> 3;
     Z = ((bits_control) & 0b0100) >> 2;
-    if (N || Z){
+    if (N || Z)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
 }
@@ -639,7 +666,8 @@ void JNN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     unsigned int bits_control, N;
     bits_control = registros[CC] >> 28;
     N = ((bits_control) & 0b1000) >> 3;
-    if (!N){
+    if (!N)
+    {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
 }
@@ -653,6 +681,35 @@ void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
 }
 
+<<<<<<< Updated upstream
 
-void NOT(int tipo1, int tipo2, int registros[],unsigned char MP[],int tabla_segmentos[] ){//afecta al registro CC
+<<<<<<< HEAD
+void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
+    // afecta al registro CC
+} == ==
+    ==
+    =
+<<<<<<< Updated upstream
+        void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
 }
+
+void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{ // afecta al registro CC
+
+    == == == =
+                 void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+    { // afecta al registro CC
+>>>>>>> Stashed changes
+    }
+>>>>>>> Stashed changes
+=======
+void NOT(int tipo1, int tipo2, int registros[],unsigned char MP[],int tabla_segmentos[] ){//afecta al registro CC
+    int valor;
+    valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
+    valor = ~valor;
+
+    escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
+    actualiza_CC(registros, valor, valor);
+}
+>>>>>>> 0daf1de7e433a16ff83d8e0900b0beb372e6edd1

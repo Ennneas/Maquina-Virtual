@@ -8,7 +8,7 @@ void carga_operandos (int , int ,int [],unsigned char [],int );
 int Conversor_Memoria_Fisica(int [], int );
 void cargar_mnemonicos(Tmnemonicos []);
 int lectura (int ,int ,int [],int [],unsigned char []);
-void escritura (int ,int [],int [],unsigned char [],int );
+void escritura (int , int,int [],int [],unsigned char [],int );
 void actualizaCC(int [], int , int);
 void MOV(int , int , int [], unsigned char [],int []);
 void ADD(int , int , int [], unsigned char [],int []);
