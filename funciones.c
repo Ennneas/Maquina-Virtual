@@ -212,17 +212,6 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
     vectormnemonico[26].ejecuta = NOT;
 }
 // ===== Dos operandos =====
-<<<<<<< HEAD
-void escritura(int tipo, int registros[], int tabla_segmentos[], unsigned char MP[], int valor_leido)
-{
-    int direcF, cod_registro, i, offset, base;
-    if (tipo == 3)
-    {
-        offset = (registros[OP1] & 0x00FFFF00);
-        offset = offset >> 8;
-        registros[LAR] = registros[registros[OP1] & 0b00000000000000000000000000011111] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
-        registros[MAR] = 4 << 16;                                                                 // reset MAR
-=======
 void escritura (int tipo, int OP, int registros[],int tabla_segmentos[],unsigned char MP[],int valor_leido){
     int direcF,cod_registro,i,offset,base;
     if (tipo==3){             
@@ -230,7 +219,6 @@ void escritura (int tipo, int OP, int registros[],int tabla_segmentos[],unsigned
         offset= offset >> 8;
         registros[LAR] = registros [registros[OP] & 0b00000000000000000000000000011111] + offset ; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = 4 << 16;                   //reset MAR
->>>>>>> 0daf1de7e433a16ff83d8e0900b0beb372e6edd1
         direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
         registros[MAR] |= direcF; // MAR parte baja
         for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
@@ -444,16 +432,10 @@ void RND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
     actualiza_CC(registros, resultado, resultado);
 }
-
 // ===== Un operando =====
-<<<<<<< Updated upstream
-
-== == == =
->>>>>>> Stashed changes
-             // Traduce dir_logica a fisica, seteando LAR/MAR como el resto de las instrucciones,
-             // y devuelve la direccion fisica (o -1 si hay fallo de segmento)
-    int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segmentos[])
-{
+             
+int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segmentos[])// Traduce dir_logica a fisica, seteando LAR/MAR como el resto de las instrucciones, 
+{ // y devuelve la direccion fisica (o -1 si hay fallo de segmento)
     int direccion_fisica;
     registros[LAR] = dir_logica;
     registros[MAR] = tam << 16; // parte alta = cantidad de bytes
@@ -680,30 +662,6 @@ void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     if (!Z)
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
 }
-
-<<<<<<< Updated upstream
-
-<<<<<<< HEAD
-void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
-    // afecta al registro CC
-} == ==
-    ==
-    =
-<<<<<<< Updated upstream
-        void JNZ(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{
-}
-
-void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ // afecta al registro CC
-
-    == == == =
-                 void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-    { // afecta al registro CC
->>>>>>> Stashed changes
-    }
->>>>>>> Stashed changes
-=======
 void NOT(int tipo1, int tipo2, int registros[],unsigned char MP[],int tabla_segmentos[] ){//afecta al registro CC
     int valor;
     valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -712,4 +670,3 @@ void NOT(int tipo1, int tipo2, int registros[],unsigned char MP[],int tabla_segm
     escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
     actualiza_CC(registros, valor, valor);
 }
->>>>>>> 0daf1de7e433a16ff83d8e0900b0beb372e6edd1

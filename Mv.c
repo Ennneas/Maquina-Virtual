@@ -368,7 +368,7 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 }
 int main(int argc, char *argv[]) // como viene d?
 {
-    char nombreArch[256];
+    char nombreArch[256],d;
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
@@ -377,6 +377,7 @@ int main(int argc, char *argv[]) // como viene d?
     leer_codigo(MP, tabla_segmentos, nombreArch);
     inicializa_registros(tabla_segmentos, registros, 0, 1);
     cargar_mnemonicos(VMnemonicos);
+    d=argc;
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, d);
