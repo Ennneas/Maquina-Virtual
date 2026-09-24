@@ -61,7 +61,7 @@ void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int Di
         registros[OP1] += MP[DireccionF + j];
         instrucomp[j] = MP[DireccionF + j];
     }
-    instrucomp[j + 1] = "\0";
+    instrucomp[j + 1] = '\0';
     registros[OP1] |= t1 << 24;
 }
 int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro)
@@ -574,7 +574,6 @@ void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 
 void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
-<<<<<<< Updated upstream
     unsigned int bits_control, N, Z;
     bits_control = registros[CC] >> 28;
     N = ((bits_control) & 0b1000) >> 3;
@@ -583,8 +582,6 @@ void JP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_seg
     {
         JMP(tipo1, tipo2, registros, MP, tabla_segmentos);
     }
-    == == == =
->>>>>>> Stashed changes
 }
 
 void JN(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])

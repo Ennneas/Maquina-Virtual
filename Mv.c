@@ -263,10 +263,10 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
             }
         }
     }
-    printf("[%d] %s  | %s  %s  %s", direfis, instrucomp, MNEM, OP_A, OP_B);
+    printf("\n[%d] %s  | %s  %s  %s", direfis, instrucomp, MNEM, OP_A, OP_B);
 }
 
-void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], int d)
+void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[],char flag_dissasembler)
 {
     char primer_byte, instrucomp[30], MNEM[5];
     int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
@@ -280,7 +280,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico))
         { // rompo con la programacion estructurada ajkajaj
             carga_operandos(top1, top2, registros, MP, registros[IP] + 1, instrucomp);
-            if (d == 1)
+            if( flag_dissasembler == 'd')
             {
                 strcpy(MNEM, VMnemonicos[indice_Mnemonico].mnemonico);
                 disassembler(top1, top2, registros, tabla_segmentos, instrucomp, MNEM);
@@ -368,7 +368,7 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 }
 int main(int argc, char *argv[]) // como viene d?
 {
-    char nombreArch[256],d;
+    char nombreArch[256];
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
@@ -377,9 +377,8 @@ int main(int argc, char *argv[]) // como viene d?
     leer_codigo(MP, tabla_segmentos, nombreArch);
     inicializa_registros(tabla_segmentos, registros, 0, 1);
     cargar_mnemonicos(VMnemonicos);
-    d=argc;
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, d);
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos,argv[2][1]);
     return 0;
 }
