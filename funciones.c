@@ -1,16 +1,20 @@
 #include "funciones.h"
-void actualiza_CC(int registros[], long long int resu_s, unsigned long long int resu_u, int valor)
+void actualiza_CC(int registros[], long long int resu_ope, int valor)
 {
-    int Z = 0, N = 0, C = 0, V = 0;
-    if ((valor >> 31) & 1)
+    int Z = 0, N = 0, C = 0, aux, V = 0;
+    if ((resu_ope >> 31) & 1)
+    {
         N = 1;
-    if (valor == 0)
+    }
+    if ((resu_ope | 0x00) == 0)
+    {
         Z = 1;
-    if ((resu_u >> 32) != 0) 
+    }
+    if ((resu_ope >> 32) == 1) // cambiar por lo que dijo el profe
         C = 1;
-    if (resu_s != valor) 
+    aux = resu_ope && 0xFFFFFFFF;
+    if (((resu_ope >> 32) == 1) && (resu_ope != valor)) // CAMBIAR POR LO QUE DIJO EL PROFE
         V = 1;
-    registros[CC] = (N << 31) | (Z << 30) | (C << 29) | (V << 28); 
 }
 void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
@@ -40,7 +44,7 @@ int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonic
         *indice_Mnmenonico = i;
     return (i < CANT_MNE);
 }
-void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int DireccionF)
+void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int DireccionF, long long int *instrucomp)
 {
     int i, j;
     registros[OP1] = registros[OP2] = 0;
@@ -49,8 +53,9 @@ void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int Di
         registros[OP2] = registros[OP2] << 8;
         registros[OP2] += MP[DireccionF + i];
     }
-
-    registros[OP2] |= (t2 << 24);
+    (*instrucomp) += registros[OP2] & 0x00FFFFFF;
+    (*instrucomp) = (*instrucomp) << 16;
+    registros[OP2] += (t2 << 24);
     for (j = i; j < t1 + t2; j++)
     {
         registros[OP1] = registros[OP1] << 8;
@@ -90,6 +95,7 @@ int lectura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned c
     else
     { // registro
         registroleer = registros[OP] & 0b00000000000000000000000000011111;
+        printf("\nregistros[registroleer]:%x",registros[registroleer]);
         return registros[registroleer];
     }
 }
@@ -221,6 +227,10 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
         {
             MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria,big endian o little??
         }
+        for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
+        {
+            printf("\nMP[%d]:%x",i,MP[direcF+i]);
+        }
     }
     else
     {
@@ -233,68 +243,64 @@ void MOV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int valor_leido;
     valor_leido = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, valor_leido);
-    actualiza_CC(registros, (long long int)valor_leido, (unsigned long long int)(unsigned int)valor_leido, valor_leido);
+    actualiza_CC(registros, valor_leido, valor_leido);
 }
 void ADD(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, suma;
-    long long int resu_s;
-    unsigned long long int resu_u;
+    long long int resu_ope;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_s = (long long int)valor1 + (long long int)valor2;
-    suma = (int)resu_s;
+    resu_ope = (long long int)valor1 + (long long int)valor2;
+    suma = (int)resu_ope;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, suma);
-
-    resu_u = (unsigned long long int)(unsigned int)valor1 + (unsigned long long int)(unsigned int)valor2;
-    actualiza_CC(registros, resu_s, resu_u, suma);
+    actualiza_CC(registros, resu_ope, suma);
     // modificaCC(resucc,registros);
 }
 void SUB(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
-    int valor1, valor2, resta;
-    long long int resu_s;
-    unsigned long long int resu_u;
+    uint16_t valor1, valor2;
+    int resta;
+    long long int resu_ope;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_s = (long long int)valor1 - (long long int)valor2;
-    resta = (int)resu_s;
+    if (valor1 > 32768) //como los inmediatos son de  16 bits  y van de -32768 a 32768, si es mayor a 32768, entonces es negativo 
+        valor1=valor1-65536;
+    if (valor2 > 32768) //si quiero restar 2 direcciones de memoria????
+        valor2=valor2-65536;//solo si el negativo "viene" de un inmediato
+    printf("\n valor2:%x",valor2);
+    resta=valor1-valor2;
+    resu_ope = (long long int)valor1 - (long long int)valor2;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resta);
-
-    resu_u = (unsigned long long int)(unsigned int)valor1 - (unsigned long long int)(unsigned int)valor2;
-    actualiza_CC(registros, resu_s, resu_u, resta);
+    actualiza_CC(registros, resu_ope, resta);
 }
 
 void MUL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, multi;
-    long long int resu_s;
-    unsigned long long int resu_u;
+    long long int resu_ope;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_s = (long long int)valor1 * (long long int)valor2;
-    multi = (int)resu_s;
+    resu_ope = (long long int)valor1 * (long long int)valor2;
+    multi = (int)resu_ope;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, multi);
-
-    resu_u = (unsigned long long int)(unsigned int)valor1 * (unsigned long long int)(unsigned int)valor2;
-    actualiza_CC(registros, resu_s, resu_u, multi);
+    actualiza_CC(registros, resu_ope, multi);
 }
 
 void DIV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, div, resto;
-    long long int resu_s;
+    long long int resu_ope;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     if (valor2 != 0)
     {
-        resu_s = (long long int)valor1 / (long long int)valor2;
+        resu_ope = (long long int)valor1 / (long long int)valor2;
         resto = valor1 % valor2;
         registros[AC] = resto;
-        div = (int)resu_s;
+        div = (int)resu_ope;
         escritura(tipo1, OP1, registros, tabla_segmentos, MP, div);
-        //DIV nunca agranda el numero por lo que no puede haber carry
-        actualiza_CC(registros, resu_s, (unsigned long long int)(unsigned int)div, div);
+        actualiza_CC(registros, resu_ope, div);
     }
     else
     {
@@ -305,120 +311,104 @@ void DIV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 void CMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, resta;
-    long long int resu_s;
-    unsigned long long int resu_u;
+    long long int resu_ope;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_s = (long long int)valor1 - (long long int)valor2;
-    resta = (int)resu_s;
+    resu_ope = (long long int)valor1 - (long long int)valor2;
+    resta = (int)resu_ope;
 
-    resu_u = (unsigned long long int)(unsigned int)valor1 - (unsigned long long int)(unsigned int)valor2;
-    actualiza_CC(registros, resu_s, resu_u, resta);
+    actualiza_CC(registros, resu_ope, resta);
 }
 
 void AND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
 
-    int valor1, valor2, res_and;
+    int valor1, valor2, resAnd;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    res_and = valor1 & valor2;
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_and);
-    //AND no puede tener overflow ni carry
-    actualiza_CC(registros, (long long int)res_and, (unsigned long long int)(unsigned int)res_and, res_and); 
+    resAnd = valor1 & valor2;
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resAnd);
+    actualiza_CC(registros, resAnd, resAnd); // sin "resu_ope" de 64 bits, no aplica acá
 }
 
 void OR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
 
-    int valor1, valor2, res_or;
+    int valor1, valor2, resor;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    res_or = valor1 | valor2;
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_or);
-
-    //OR no puede tener overflow ni carry
-    actualiza_CC(registros, (long long int)res_or, (unsigned long long int)(unsigned int)res_or, res_or);
+    resor = valor1 | valor2;
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resor);
+    actualiza_CC(registros, resor, resor);
 }
 
 void XOR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
-    int valor1, valor2, res_xor;
+    int valor1, valor2, resxor;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    res_xor = valor1 ^ valor2;
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_xor);
-
-    //XOR no puede tener overflow ni carry
-    actualiza_CC(registros, (long long int)res_xor, (unsigned long long int)(unsigned int)res_xor, res_xor);
+    resxor = valor1 ^ valor2;
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resxor);
+    actualiza_CC(registros, resxor, resxor);
 }
 
 void SWAP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
-    int valorA, valorB, res_xor;
+    int valorA, valorB, resxor;
 
     valorA = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     valorB = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
 
-    res_xor = valorA ^ valorB; // XOR A, B  -> A
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_xor);
-    valorA = res_xor;
+    resxor = valorA ^ valorB; // XOR A, B  -> A
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resxor);
+    valorA = resxor;
 
-    res_xor = valorB ^ valorA; // XOR B, A  -> B
-    escritura(tipo2, OP2, registros, tabla_segmentos, MP, res_xor);
-    valorB = res_xor;
+    resxor = valorB ^ valorA; // XOR B, A  -> B
+    escritura(tipo2, OP2, registros, tabla_segmentos, MP, resxor);
+    valorB = resxor;
 
-    res_xor = valorA ^ valorB; // XOR A, B  -> A
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_xor);
+    resxor = valorA ^ valorB; // XOR A, B  -> A
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, resxor);
 
-    //XOR no puede tener overflow ni carry
-    //CC según el último XOR
-    actualiza_CC(registros, (long long int)res_xor, (unsigned long long int)(unsigned int)res_xor, res_xor); 
+    actualiza_CC(registros, resxor, resxor); // CC según el último XOR
 }
 
 void SHL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // PREGUNTAR como es cc con los shift
 {                                                                                          // afecta al registro CC
     int valor1, valor2, shleft;
-    long long int resu_s;
-    unsigned long long int resu_u;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_s = (long long int)valor1 << valor2;
-    shleft = (int)resu_s;
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, shleft);
+    shleft = valor1 << valor2;
 
-    resu_u = (unsigned long long int)(unsigned int)valor1 << valor2;
-    actualiza_CC(registros, resu_s, resu_u, shleft);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, shleft);
+    actualiza_CC(registros, shleft, shleft);
 }
 
 void SHR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, shright;
-    unsigned long long int resu_u;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_u = (unsigned long long int)(unsigned int)valor1 >> valor2;
-    shright = (int)resu_u;
-    escritura(tipo1, OP1, registros, tabla_segmentos, MP, shright);
+    shright = (int)((unsigned int)valor1 >> valor2);
 
-    actualiza_CC(registros, (long long int)shright, resu_u, shright);
+    escritura(tipo1, OP1, registros, tabla_segmentos, MP, shright);
+    actualiza_CC(registros, shright, shright);
 }
 
 void SAR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
     int valor1, valor2, saright;
-    long long int resu_s;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resu_s = (long long int)valor1 >> valor2;
-    saright = (int)resu_s;
+
+    saright = valor1 >> valor2;
 
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, saright);
-    actualiza_CC(registros, resu_s, (unsigned long long int)(unsigned int)saright, saright);
+    actualiza_CC(registros, saright, saright);
 }
 
 void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ 
+{ // afecta al registro CC
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
@@ -426,10 +416,11 @@ void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     resultado = (valor1 & 0x0000FFFF) | (valor2 & 0x0000FFFF);
 
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
+    actualiza_CC(registros, resultado, resultado);
 }
 
 void LDH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ 
+{ // afecta al registro CC
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
@@ -437,11 +428,11 @@ void LDH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     resultado = (valor1 & 0xFFFF0000) | ((valor2 & 0xFFFF0000) << 16);
 
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
-
+    actualiza_CC(registros, resultado, resultado);
 }
 
 void RND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ 
+{ // afecta al registro CC
     int valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
 
@@ -451,6 +442,7 @@ void RND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         resultado = 0; // por las dudas, si viene un valor negativo mal formado
 
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
+    actualiza_CC(registros, resultado, resultado);
 }
 // ===== Un operando =====
 
@@ -686,6 +678,5 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     valor = ~valor;
 
     escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
-    //NOT no puede tener overflow ni carry
-    actualiza_CC(registros, (long long int)valor, (unsigned long long int)(unsigned int)valor, valor);
+    actualiza_CC(registros, valor, valor);
 }
