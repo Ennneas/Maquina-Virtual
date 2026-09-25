@@ -3,12 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-<<<<<<< Updated upstream
 void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[])
-=======
-void disassembler(int top1, int top2, int registros[], int tabla_segmentos[],unsigned long long int *instrucomp, char MNEM[5])
->>>>>>> Stashed changes
 {
     int direfis, registro, inmediato, longop;
     char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "";
@@ -389,7 +384,7 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 int main(int argc, char *argv[])
 {
     char nombreArch[256];
-    int tabla_segmentos[TAM_TABLA],i;
+    int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
@@ -399,11 +394,7 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-<<<<<<< Updated upstream
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1]);
-=======
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1], &instruccion_completa);
     printf("\nEAX:%d",registros[EAX]);
->>>>>>> Stashed changes
     return 0;
 }
