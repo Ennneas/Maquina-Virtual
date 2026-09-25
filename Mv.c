@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], long long int *instrucomp, char MNEM[5])
+void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[])
 {
-    int direfis, registro, inmediato;
-    char OP_A[10] = "\0", OP_B[10] = "\0", Cad_Instru[8];
+    int direfis, registro, inmediato, longop;
+    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "";
 
     direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
 
@@ -17,60 +17,64 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], lo
         switch (registro)
         {
         case IP:
-            strcpy(OP_A, "IP +");
+            strcpy(OP_A, "[IP +");
             break;
         case OPC:
-            strcpy(OP_A, "OPC+");
+            strcpy(OP_A, "[OPC+");
             break;
         case OP1:
-            strcpy(OP_A, "OP1+");
+            strcpy(OP_A, "[OP1+");
             break;
         case OP2:
-            strcpy(OP_A, "OP2+");
+            strcpy(OP_A, "[OP2+");
             break;
         case LAR:
-            strcpy(OP_A, "LAR+");
+            strcpy(OP_A, "[LAR+");
             break;
         case MAR:
-            strcpy(OP_A, "MAR+");
+            strcpy(OP_A, "[MAR+");
             break;
         case MBR:
-            strcpy(OP_A, "MBR+");
+            strcpy(OP_A, "[MBR+");
             break;
         case EAX:
-            strcpy(OP_A, "EAX+");
+            strcpy(OP_A, "[EAX+");
             break;
         case EBX:
-            strcpy(OP_A, "EBX+");
+            strcpy(OP_A, "[EBX+");
             break;
         case ECX:
-            strcpy(OP_A, "ECX+");
+            strcpy(OP_A, "[ECX+");
             break;
         case EDX:
-            strcpy(OP_A, "EDX+");
+            strcpy(OP_A, "[EDX+");
             break;
         case EEX:
-            strcpy(OP_A, "EEX+");
+            strcpy(OP_A, "[EEX+");
             break;
         case EFX:
-            strcpy(OP_A, "EFX+");
+            strcpy(OP_A, "[EFX+");
             break;
         case AC:
-            strcpy(OP_A, "AC +");
+            strcpy(OP_A, "[AC +");
             break;
         case CC:
-            strcpy(OP_A, "CC +");
+            strcpy(OP_A, "[CC +");
             break;
         case CS:
-            strcpy(OP_A, "CS +");
+            strcpy(OP_A, "[CS +");
             break;
         case DS:
-            strcpy(OP_A, "DS +");
+            strcpy(OP_A, "[DS +");
             break;
         }
         inmediato = (registros[OP1] & 0x00FFFF00) >> 8;
         printf("\n inmediato:%d", registros[OP1] & 0x00FFFF00);
-        snprintf(OP_A + 4, sizeof(OP_A) - 4, "%d", inmediato);
+        snprintf(OP_A + 5, sizeof(OP_A) - 5, "%d", inmediato);
+
+        int longop = strlen(OP_A);
+        OP_A[longop] = ']';
+        OP_A[longop + 1] = '\0';
     }
     else
     {
@@ -144,59 +148,63 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], lo
         switch (registro)
         {
         case IP:
-            strcpy(OP_B, "IP +");
+            strcpy(OP_B, "[IP +");
             break;
         case OPC:
-            strcpy(OP_B, "OPC+");
+            strcpy(OP_B, "[OPC+");
             break;
         case OP1:
-            strcpy(OP_B, "OP1+");
+            strcpy(OP_B, "[OP1+");
             break;
         case OP2:
-            strcpy(OP_B, "OP2+");
+            strcpy(OP_B, "[OP2+");
             break;
         case LAR:
-            strcpy(OP_B, "LAR+");
+            strcpy(OP_B, "[LAR+");
             break;
         case MAR:
-            strcpy(OP_B, "MAR+");
+            strcpy(OP_B, "[MAR+");
             break;
         case MBR:
-            strcpy(OP_B, "MBR+");
+            strcpy(OP_B, "[MBR+");
             break;
         case EAX:
-            strcpy(OP_B, "EAX+");
+            strcpy(OP_B, "[EAX+");
             break;
         case EBX:
-            strcpy(OP_B, "EBX+");
+            strcpy(OP_B, "[EBX+");
             break;
         case ECX:
-            strcpy(OP_B, "ECX+");
+            strcpy(OP_B, "[ECX+");
             break;
         case EDX:
-            strcpy(OP_B, "EDX+");
+            strcpy(OP_B, "[EDX+");
             break;
         case EEX:
-            strcpy(OP_B, "EEX+");
+            strcpy(OP_B, "[EEX+");
             break;
         case EFX:
-            strcpy(OP_B, "EFX+");
+            strcpy(OP_B, "[EFX+");
             break;
         case AC:
-            strcpy(OP_B, "AC +");
+            strcpy(OP_B, "[AC +");
             break;
         case CC:
-            strcpy(OP_B, "CC +");
+            strcpy(OP_B, "[CC +");
             break;
         case CS:
-            strcpy(OP_B, "CS +");
+            strcpy(OP_B, "[CS +");
             break;
         case DS:
-            strcpy(OP_B, "DS +");
+            strcpy(OP_B, "[DS +");
             break;
         }
         inmediato = (registros[OP2] & 0x00FFFF00) >> 8;
-        snprintf(OP_B + 4, sizeof(OP_A) - 4, "%d", inmediato);
+        snprintf(OP_B + 5, sizeof(OP_B) - 5, "%d", inmediato);
+
+        int longop = strlen(OP_B);
+        OP_B[longop] = ']';
+        OP_B[longop + 1] = '\0';
     }
     else
     {
@@ -264,30 +272,34 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], lo
             }
         }
     }
-    sprintf(Cad_Instru, "%x", *instrucomp);
-    printf("\n[%d] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
+    int longitud = top1 + top2 + 1;
+    for (int b = 0; b < longitud; b++)
+    {
+        char byteStr[4];
+        sprintf(byteStr, "%02X ", (unsigned char)MP[direfis + b]);
+        strcat(Cad_Instru, byteStr);
+    }
+    printf("\n[%04X] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
 }
 
-void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, long long int *instruccion_completa)
+void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler)
 {
     char primer_byte, MNEM[5];
     int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
-        *instruccion_completa = 0;
-        (*instruccion_completa) = (*instruccion_completa) << 8;
-        *instruccion_completa = MP[Memoria_fisica_IP];
+
         top2 = (primer_byte & 0b11000000) >> 6; // tipo de operando B
         top1 = (primer_byte & 0b00110000) >> 4; // tipo de operando A
         opc = (primer_byte & 0b00011111);       // Codigo de Operacion
         if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico))
         { // rompo con la programacion estructurada ajkajaj
-            carga_operandos(top1, top2, registros, MP, registros[IP] + 1, instruccion_completa);
+            carga_operandos(top1, top2, registros, MP, registros[IP] + 1);
             if (flag_dissasembler == 'd')
             {
                 strcpy(MNEM, VMnemonicos[indice_Mnemonico].mnemonico);
-                disassembler(top1, top2, registros, tabla_segmentos, instruccion_completa, MNEM);
+                disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
             }
             registros[IP] += top1 + top2 + 1;
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
@@ -375,7 +387,6 @@ int main(int argc, char *argv[])
     char nombreArch[256];
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
-    long long int instruccion_completa;
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
     strcpy(nombreArch, argv[1]);
@@ -384,6 +395,6 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1], &instruccion_completa);
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1]);
     return 0;
 }

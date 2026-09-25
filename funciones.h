@@ -4,7 +4,7 @@
 int busca_registro(int, int[]);
 void lee_memoria(int, int[], int[], unsigned char[]);
 int valida_instruccion(int, Tmnemonicos[], int *);
-void carga_operandos(int, int, int[], unsigned char[], int, long long int *);
+void carga_operandos(int, int, int[], unsigned char[], int);
 int Conversor_Memoria_Fisica(int[], int);
 void cargar_mnemonicos(Tmnemonicos[]);
 int lectura(int, int, int[], int[], unsigned char[]);

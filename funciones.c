@@ -44,7 +44,7 @@ int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonic
         *indice_Mnmenonico = i;
     return (i < CANT_MNE);
 }
-void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int DireccionF, long long int *instrucomp)
+void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int DireccionF)
 {
     int i, j;
     registros[OP1] = registros[OP2] = 0;
@@ -54,9 +54,7 @@ void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int Di
         registros[OP2] += MP[DireccionF + i];
     }
 
-    (*instrucomp) += registros[OP2] & 0x00FFFFFF;
-    (*instrucomp) = (*instrucomp) << 16;
-    registros[OP2] += (t2 << 24);
+    registros[OP2] |= (t2 << 24);
     for (j = i; j < t1 + t2; j++)
     {
         registros[OP1] = registros[OP1] << 8;
