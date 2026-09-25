@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char instrucomp[], char MNEM[5])
+void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], long long int *instrucomp, char MNEM[5])
 {
     int direfis, registro, inmediato;
-    char OP_A[10] = "\0", OP_B[10] = "\0";
+    char OP_A[10] = "\0", OP_B[10] = "\0", Cad_Instru[8];
 
     direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
 
@@ -68,15 +68,16 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
             strcpy(OP_A, "DS +");
             break;
         }
-        inmediato = registros[OP1] & 0x00FFFF00;
+        inmediato = (registros[OP1] & 0x00FFFF00) >> 8;
+        printf("\n inmediato:%d", registros[OP1] & 0x00FFFF00);
         snprintf(OP_A + 4, sizeof(OP_A) - 4, "%d", inmediato);
     }
     else
     {
         if (top1 == 2)
         {
-            inmediato = registros[OP1] & 0x00FFFFFF;
-            sprintf(OP_A, "%d", inmediato);
+            inmediato = (registros[OP1] & 0x0000FFFF);
+            sprintf(OP_A, "%d", inmediato); //
         }
         else if (top1 == 1)
         {
@@ -194,14 +195,14 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
             strcpy(OP_B, "DS +");
             break;
         }
-        inmediato = registros[OP2] & 0x00FFFF00;
+        inmediato = (registros[OP2] & 0x00FFFF00) >> 8;
         snprintf(OP_B + 4, sizeof(OP_A) - 4, "%d", inmediato);
     }
     else
     {
         if (top2 == 2)
         {
-            inmediato = registros[OP2] & 0x00FFFFFF;
+            inmediato = (registros[OP2] & 0x0000FFFF);
             sprintf(OP_B, "%d", inmediato);
         }
         else if (top2 == 1)
@@ -263,33 +264,36 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
             }
         }
     }
-    printf("\n[%d] %s  | %s  %s  %s", direfis, instrucomp, MNEM, OP_A, OP_B);
+    sprintf(Cad_Instru, "%x", *instrucomp);
+    printf("\n[%d] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
 }
 
-void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[],char flag_dissasembler)
+void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, long long int *instruccion_completa)
 {
-    char primer_byte, instrucomp[30], MNEM[5];
+    char primer_byte, MNEM[5];
     int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
-        instrucomp[0] = MP[Memoria_fisica_IP];
+        *instruccion_completa = 0;
+        (*instruccion_completa) = (*instruccion_completa) << 8;
+        *instruccion_completa = MP[Memoria_fisica_IP];
         top2 = (primer_byte & 0b11000000) >> 6; // tipo de operando B
         top1 = (primer_byte & 0b00110000) >> 4; // tipo de operando A
         opc = (primer_byte & 0b00011111);       // Codigo de Operacion
         if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico))
         { // rompo con la programacion estructurada ajkajaj
-            carga_operandos(top1, top2, registros, MP, registros[IP] + 1, instrucomp);
-            if( flag_dissasembler == 'd')
+            carga_operandos(top1, top2, registros, MP, registros[IP] + 1, instruccion_completa);
+            if (flag_dissasembler == 'd')
             {
                 strcpy(MNEM, VMnemonicos[indice_Mnemonico].mnemonico);
-                disassembler(top1, top2, registros, tabla_segmentos, instrucomp, MNEM);
+                disassembler(top1, top2, registros, tabla_segmentos, instruccion_completa, MNEM);
             }
             registros[IP] += top1 + top2 + 1;
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
         }
         else if (opc == 0x0F)
-        { // instruccion STOP
+        { // instruccion STOP,IMPLICITA
             registros[IP] = -1;
         }
         else
@@ -366,11 +370,12 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
     }
     fclose(Ar);
 }
-int main(int argc, char *argv[]) // como viene d?
+int main(int argc, char *argv[])
 {
     char nombreArch[256];
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
+    long long int instruccion_completa;
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
     strcpy(nombreArch, argv[1]);
@@ -379,6 +384,6 @@ int main(int argc, char *argv[]) // como viene d?
     cargar_mnemonicos(VMnemonicos);
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos,argv[2][1]);
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1], &instruccion_completa);
     return 0;
 }
