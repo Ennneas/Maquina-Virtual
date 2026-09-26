@@ -441,7 +441,7 @@ void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    resultado = ((valor1 & 0x0000FFFF) << 16) | (valor2 & 0x0000FFFF);
+    resultado = (valor1 & 0xFFFF0000) | (valor2 & 0x0000FFFF);
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
 }
 
