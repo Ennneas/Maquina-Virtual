@@ -306,8 +306,10 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         }
         else if (opc == 0x0F)
         { // instruccion STOP,IMPLICITA
-            strcpy(MNEM, "STOP");
-            disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
+            if (flag_dissasembler == 'd'){
+                strcpy(MNEM, "STOP");
+                disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
+            }
             registros[IP] = -1;
         }
         else
@@ -408,12 +410,7 @@ int main(int argc, char *argv[])
 
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-<<<<<<< Updated upstream
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis); 
 
-=======
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1]); // si no ingresa una flag no anda el programa, porque arg[2][1] es inaccesible
-    int j;
->>>>>>> Stashed changes
     return 0;
 }

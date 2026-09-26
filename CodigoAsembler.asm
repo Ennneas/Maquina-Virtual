@@ -1,27 +1,3 @@
-<<<<<<< Updated upstream
-MOV [10], 0x41
-SHL [10], 8
-OR [10], 'a'
-MOV EDX, DS
-ADD EDX, 12; EDX apunta a DS+12
-; Armamos el primer 2147483647 en EAX
-LDL EAX, 0xFFFF
-LDH EAX, 0x7FFF
-; Armamos el segundo 2147483647 en EBX
-LDL EBX, 0xFFFF
-LDH EBX, 0x7FFF
-; Movemos el primero a la memoria
-MOV [12], EAX
-; Sumamos el segundo a la memoria
-ADD [12], EBX
-JV ESCRITURA
-MOV [12], 1
-ESCRITURA: LDL ECX, 1
-LDH ECX, 4
-MOV EAX, 0x01 
-SYS 0x2
-STOP
-=======
 inicio: MOV EAX, 32767      ; EAX = 32767 (0x7FFF)
     SHL EAX, 20         ; EAX << 20 -> excede 32 bits -> genera C=1
     JC  hubocarry
@@ -36,10 +12,9 @@ hubocarry: MOV [50], 1         ; hubo carry -> guarda 1
 fin: MOV EDX, DS         ; EDX = puntero al segmento de datos
     ADD EDX, 50         ; EDX apunta a la celda [50]
     MOV ECX, 0x00010001 ; ECX: 1 celda de tamaño 1 byte (o ajustar según tu SYS)
-    LDH ECX, 1          ; tamaño de celda = 1
+    LDH ECX, 4          ; tamaño de celda = 1
     LDL ECX, 1          ; cantidad de celdas = 1
     MOV EAX, 0x01       ; modo de impresión = decimal
     SYS 2               ; llamada WRITE: muestra el valor de [50] por consola
 
     STOP
->>>>>>> Stashed changes
