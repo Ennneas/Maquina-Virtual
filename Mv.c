@@ -68,7 +68,6 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
             break;
         }
         inmediato = (registros[OP1] & 0x00FFFF00) >> 8;
-        printf("\n inmediato:%d", registros[OP1] & 0x00FFFF00);
         snprintf(OP_A + 5, sizeof(OP_A) - 5, "%d", inmediato);
 
         int longop = strlen(OP_A);
@@ -280,7 +279,6 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
     }
     printf("\n[%04X] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
 }
-
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler)
 {
     char primer_byte, MNEM[5];
@@ -309,7 +307,6 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         }
         else
         { // INSTRUCCION INVALIDA
-            printf("\n instruccion :%x invalida", opc);
             registros[IP] = -1;
         }
     }
@@ -383,7 +380,7 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 }
 int main(int argc, char *argv[])
 {
-    char nombreArch[256];
+    char nombreArch[256],flag_dis;
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
@@ -394,7 +391,7 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1]);
-    printf("\nEAX:%d",registros[EAX]);
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos,argv[2][1]); //si no ingresa una flag no anda el programa, porque arg[2][1] es inaccesible
+    int j;
     return 0;
 }

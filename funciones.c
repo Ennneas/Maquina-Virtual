@@ -213,7 +213,7 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
     {
         offset = (registros[OP] & 0x00FFFF00);
         offset = offset >> 8;
-        registros[LAR] = registros[registros[OP] & 0b00000000000000000000000000011111] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
+        registros[LAR] = registros[registros[OP] & 0x01F] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = 4 << 16;                                                                // reset MAR
         direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
         registros[MAR] |= direcF; // MAR parte baja
@@ -224,7 +224,7 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
     }
     else
     {
-        cod_registro = registros[OP] & 0b00000000000000000000000000011111;
+        cod_registro = registros[OP] & 0x1F;
         registros[cod_registro] = valor_leido;
     }
 }
@@ -429,9 +429,7 @@ void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-
-    resultado = (valor1 & 0x0000FFFF) | (valor2 & 0x0000FFFF);
-
+    resultado = ((valor1 & 0x0000FFFF) << 16) | (valor2 & 0x0000FFFF);
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
 }
 
@@ -440,9 +438,7 @@ void LDH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-
-    resultado = (valor1 & 0xFFFF0000) | ((valor2 & 0xFFFF0000) << 16);
-
+    resultado = (valor2 << 16) | (valor1 & 0x0000FFFF);
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
 
 }
@@ -540,10 +536,11 @@ void sys_write(int dir_log, int cant, int tam, int modo, int registros[], int ta
 void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
     int i, j, direccion_fisica, valor;
-
+    printf("\ncantidad:%d",cant);
     for (i = 0; i < cant; i++)
     {
         direccion_fisica = traduce_y_setea_MAR(dir_log + i * tam, tam, registros, tabla_segmentos);
+        printf("\ndireccion_fisica:%d",direccion_fisica );
         if (direccion_fisica == -1)
         {
             printf("\nError: fallo de segmento");
@@ -568,22 +565,22 @@ void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tab
             scanf("%d", &valor);
 
         registros[MBR] = valor;
-        for (j = 0; j < tam; j++)
+        for (j = 0; j < tam; j++){
             MP[direccion_fisica + j] = (valor >> (8 * (tam - 1 - j))) & 0xFF;
+        }
     }
 }
-
 void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
-    int llamada = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
+    int llamada = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     int modo = registros[EAX];
     int cant = registros[ECX] & 0x0000FFFF;        // cantidad de celdas
-    int tam = (registros[ECX] >> 16) & 0x0000FFFF; // tamaño de c/celda
+    int tam = (registros[ECX] >> 16); // tamaño de c/celda
     int dir_log = registros[EDX];                  // puntero inicial
-
-    if (llamada == 1)
+    if (llamada == 1){
         sys_read(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    else if (llamada == 2)
+    }else 
+        if (llamada == 2)
         sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
     else
     {
@@ -591,7 +588,6 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         registros[IP] = -1;
     }
 }
-
 void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // Lee el operando 2 al ser una funcion de un solo operando
 {
     unsigned int direccion_salto;

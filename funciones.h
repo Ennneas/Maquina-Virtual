@@ -1,6 +1,7 @@
 #ifndef funciones_h
 #define funciones_h
 #include "TIPOS.h"
+
 void lee_memoria(int, int[], int[], unsigned char[]);
 int valida_instruccion(int, Tmnemonicos[], int *);
 void carga_operandos(int, int, int[], unsigned char[], int);
