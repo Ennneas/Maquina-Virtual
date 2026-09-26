@@ -85,7 +85,7 @@ int lectura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned c
     }
     else if (tipo == 0b10)
     { // inmediato
-        return registros[OP] & 0x00FFFFFF;
+        return (int)(short int)(registros[OP] & 0x0000FFFF);
     }
     else
     { // registro
@@ -390,6 +390,10 @@ void SHL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     unsigned long long int resu_u;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
+
+    if (valor2 < 0)
+        valor2 = 0;
+
     resu_s = (long long int)valor1 << valor2;
     shleft = (int)resu_s;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, shleft);
@@ -404,6 +408,10 @@ void SHR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     unsigned long long int resu_u;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
+
+    if (valor2 < 0)
+        valor2 = 0;
+
     resu_u = (unsigned long long int)(unsigned int)valor1 >> valor2;
     shright = (int)resu_u;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, shright);
@@ -417,6 +425,10 @@ void SAR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     long long int resu_s;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
+
+    if (valor2 < 0)
+        valor2 = 0;
+
     resu_s = (long long int)valor1 >> valor2;
     saright = (int)resu_s;
 
@@ -516,7 +528,7 @@ void sys_write(int dir_log, int cant, int tam, int modo, int registros[], int ta
 
         valor = 0;
         for (j = 0; j < tam; j++)
-            valor = (valor << 8) | MP[direccion_fisica + j];
+            valor = (valor << 8) | (char)MP[direccion_fisica + j];
         registros[MBR] = valor;
 
         printf("\n[%04X]: ", direccion_fisica);

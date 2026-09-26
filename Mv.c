@@ -380,18 +380,30 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 }
 int main(int argc, char *argv[])
 {
-    char nombreArch[256],flag_dis;
+    char nombreArch[256], flag_dis = '\0';
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
+
+    if (argc < 2) {
+        printf("Falta el nombre del archivo\n");
+        return 1;
+    }
+
     strcpy(nombreArch, argv[1]);
+    
+    if (argc >= 3 && argv[2] != NULL && strlen(argv[2]) > 1) {
+        flag_dis = argv[2][1];
+    }
+
     leer_codigo(MP, tabla_segmentos, nombreArch);
     inicializa_registros(tabla_segmentos, registros, 0, 1);
     cargar_mnemonicos(VMnemonicos);
+
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos,argv[2][1]); //si no ingresa una flag no anda el programa, porque arg[2][1] es inaccesible
-    int j;
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis); 
+
     return 0;
 }
