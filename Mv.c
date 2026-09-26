@@ -277,7 +277,10 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         sprintf(byteStr, "%02X ", (unsigned char)MP[direfis + b]);
         strcat(Cad_Instru, byteStr);
     }
-    printf("\n[%04X] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
+    if (strcmp(MNEM, "STOP") != 0)
+        printf("\n[%04X] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
+    else
+        printf("\n[%04X] %s  | %s", direfis, Cad_Instru, MNEM);
 }
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler)
 {
@@ -303,6 +306,8 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         }
         else if (opc == 0x0F)
         { // instruccion STOP,IMPLICITA
+            strcpy(MNEM, "STOP");
+            disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
             registros[IP] = -1;
         }
         else
@@ -403,7 +408,12 @@ int main(int argc, char *argv[])
 
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
+<<<<<<< Updated upstream
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis); 
 
+=======
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, argv[2][1]); // si no ingresa una flag no anda el programa, porque arg[2][1] es inaccesible
+    int j;
+>>>>>>> Stashed changes
     return 0;
 }
