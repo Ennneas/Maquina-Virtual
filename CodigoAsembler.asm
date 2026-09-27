@@ -1,13 +1,11 @@
-inicio: MOV EAX, 32767      ; EAX = 32767 (0x7FFF)
-    SHL EAX, 20         ; EAX << 20 -> excede 32 bits -> genera C=1
-    JC  hubocarry
+inicio: MOV EAX, 10
+    MOV EBX, -20
+    SWAP EAX, EBX
+    JN  NEGATIVO
 
-    MOV [50], 0         ; no hubo carry -> guarda 0
+    MOV [50], 0         ; no NEGATIVO -> guarda 0
     JMP fin
-
-
-hubocarry: MOV [50], 1         ; hubo carry -> guarda 1
-
+NEGATIVO: MOV [50], 1         ; NEGATIVO -> guarda 1
 
 fin: MOV EDX, DS         ; EDX = puntero al segmento de datos
     ADD EDX, 50         ; EDX apunta a la celda [50]
