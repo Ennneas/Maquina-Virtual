@@ -408,8 +408,9 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
 
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1)
+    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP])!=-1)
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis); 
-
+    
+    
     return 0;
 }

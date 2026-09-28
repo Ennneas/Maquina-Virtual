@@ -1,6 +1,7 @@
 #include "funciones.h"
 void actualiza_CC(int registros[], long long int resu_s, unsigned long long int resu_u, int valor)
 {
+    
     int Z = 0, N = 0, C = 0, V = 0;
     if ((valor >> 31) & 1)
         N = 1;
@@ -23,13 +24,18 @@ void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char M
     registros[MAR] = 4 << 16; // MAR parte alta
 
     Direccion_Fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
-    registros[MAR] |= Direccion_Fisica; // MAR parte baja
+    if (Direccion_Fisica!=-1){
+        registros[MAR] |= Direccion_Fisica; // MAR parte baja
 
-    registros[MBR] = 0;
-    for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
-    {
-        registros[MBR] += MP[Direccion_Fisica + i] << (8 * (4 - 1 - i));
-    }
+        registros[MBR] = 0;
+        for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
+        {
+            registros[MBR] += MP[Direccion_Fisica + i] << (8 * (4 - 1 - i));
+        }
+    }else{                
+            registros[IP] = -1; // en el caso que no haya un stop
+            printf("\n SEGMENTATION FAULT");
+        }
 }
 int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonico)
 {
@@ -65,7 +71,6 @@ int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro)
     int pos = ((unsigned int)registro & 0xFFFF0000) >> 16;
     if (pos < 0 || pos >= TAM_TABLA || tabla_segmentos[pos] == -1)
         return -1;
-
     int direccionbase = ((unsigned int)tabla_segmentos[pos] & 0xFFFF0000) >> 16;
     int limite = tabla_segmentos[pos] & 0x0000FFFF; // Tamaño del segmento
     int direccionfisica = direccionbase + offset;
@@ -216,10 +221,15 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
         registros[LAR] = registros[registros[OP] & 0x01F] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = 4 << 16;                                                                // reset MAR
         direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
-        registros[MAR] |= direcF; // MAR parte baja
-        for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
-        {
-            MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria,big endian o little??
+        if (direcF!=-1){
+            registros[MAR] |= direcF; // MAR parte baja
+            for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
+            {
+                MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria,big endian o little??
+            }
+        }else{                
+            registros[IP] = -1; // en el caso que no haya un stop
+            printf("\n SEGMENTATION FAULT");
         }
     }
     else
@@ -525,12 +535,10 @@ void sys_write(int dir_log, int cant, int tam, int modo, int registros[], int ta
             registros[IP] = -1;
             return;
         }
-
         valor = 0;
         for (j = 0; j < tam; j++)
-            valor = (valor << 8) | (char)MP[direccion_fisica + j];
+            valor = (valor << 8) | (unsigned char)MP[direccion_fisica + j];
         registros[MBR] = valor;
-
         printf("\n[%04X]: ", direccion_fisica);
         if (modo & 0x10)
             escribe_binario(valor, tam);
@@ -548,7 +556,6 @@ void sys_write(int dir_log, int cant, int tam, int modo, int registros[], int ta
 void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
     int i, j, direccion_fisica, valor;
-    printf("\ncantidad:%d",cant);
     for (i = 0; i < cant; i++)
     {
         direccion_fisica = traduce_y_setea_MAR(dir_log + i * tam, tam, registros, tabla_segmentos);
@@ -597,7 +604,7 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     else
     {
         printf("\nLlamada al sistema invalida");
-        registros[IP] = -1;
+        //registros[IP] = -1;
     }
 }
 void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // Lee el operando 2 al ser una funcion de un solo operando
@@ -699,7 +706,6 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int valor;
     valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor = ~valor;
-
     escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
     //NOT no puede tener overflow ni carry
     actualiza_CC(registros, (long long int)valor, (unsigned long long int)(unsigned int)valor, valor);
