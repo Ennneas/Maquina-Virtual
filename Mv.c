@@ -306,7 +306,8 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         }
         else if (opc == 0x0F)
         { // instruccion STOP,IMPLICITA
-            if (flag_dissasembler == 'd'){
+            if (flag_dissasembler == 'd')
+            {
                 strcpy(MNEM, "STOP");
                 disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
             }
@@ -330,27 +331,45 @@ void inicializa_registros(int tabla_segmentos[], int registros[], int poscodes, 
     registros[DS] = posdatas << 16;
     registros[IP] = poscodes << 16;
 }
-void inicializar_tabla(int tabla_segmentos[], int tamanioCS)
+
+void inicializar_tabla(int tabla_segmentos[], int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioPS, int tamanioKS)
 {
-    int i = 2, ds = 1, cs = 0;
-    while (i < 7)
+    int tamanios[6] = {tamanioPS, tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
+    // PS=31, KS=30, CS=26, DS=27, ES=28, SS=29
+    int reg_seg[6] = {31, 30, 26, 27, 28, 29};
+    int i;
+
+    int base = 0, n = 0;
+    for (i = 0; i < 6; i++)
     {
-        tabla_segmentos[i] = -1;
-        i++;
+        if (tamanios[i] > 0)
+        {
+            tabla_segmentos[n] = (base << 16) | tamanios[i];
+            registros[reg_seg[i]] = n << 16;
+            base += tamanios[i];
+            n++;
+        }
+        else
+        {
+            registros[reg_seg[i]] = 0xFFFFFFFF;
+        }
     }
-    tabla_segmentos[cs] = tamanioCS;                                     // siempre que el cs este en la pos 0 de la tabla
-    tabla_segmentos[ds] = tamanioCS << 16 | ((MAX_MEMORIA - tamanioCS)); // Asigno los 2 bytes mas significativos del tamaño a la base del DS y en los 2 menos significativos su tamaño
+
+    if (base > memoria_total)
+    {
+        printf("memoria insuficiente");
+    }
 }
 void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
 {
-    int i = 0, version, tamanioCS = 0, j = 0, k = 0;
+    int i = 0, version, tamanioCS = 0, j = 0, k = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0;
     char x, identificador[6];
     FILE *Ar;
     Ar = fopen(nombreArch, "rb");
     if (Ar != NULL)
         while (fread(&x, sizeof(char), 1, Ar) == 1)
         {
-            if (i <= 7)
+            if (i <= 17)
             {
                 if (i < 5)
                     identificador[i] = x;
@@ -361,13 +380,48 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
                 }
                 else if (i == 6)
                     tamanioCS = x;
-                else
+                else if (i == 7)
                 {
                     tamanioCS = tamanioCS << 8;
                     tamanioCS += x;
                 }
+                else if (i == 8)
+                    tamanioDS = x;
+                else if (i == 9)
+                {
+                    tamanioDS = tamanioDS << 8;
+                    tamanioDS += x;
+                }
+                else if (i == 10)
+                    tamanioES = x;
+                else if (i == 11)
+                {
+                    tamanioES = tamanioSS << 8;
+                    tamanioES += x;
+                }
+                else if (i == 12)
+                    tamanioSS = x;
+                else if (i == 13)
+                {
+                    tamanioSS = tamanioSS << 8;
+                    tamanioSS += x;
+                }
+                else if (i == 14)
+                    tamanioKS = x;
+                else if (i == 15)
+                {
+                    tamanioKS = tamanioKS << 8;
+                    tamanioKS += x;
+                }
+                else if (i == 16)
+                    offsetEP = x;
+                else
+                {
+                    offsetEP = offsetEP << 8;
+                    offsetEP += x;
+                }
             }
-            else if (strcmp(identificador, "VMX26") == 0 && version == 1) // agrego version es != 1 por las dudas
+            else if (strcmp(identificador, "VMX26") == 0 && version == 2) // agrego version es != 1 por las dudas
             {
                 MP[k] = x;
                 k++;
@@ -378,12 +432,13 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
         }
     else
         printf("\n Archivo inexsistente ");
-    if (i >= 8)
+    if (i >= 17)
     {
         inicializar_tabla(tabla_segmentos, tamanioCS);
     }
     fclose(Ar);
 }
+
 int main(int argc, char *argv[])
 {
     char nombreArch[256], flag_dis = '\0';
@@ -392,14 +447,16 @@ int main(int argc, char *argv[])
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
 
-    if (argc < 2) {
+    if (argc < 2)
+    {
         printf("Falta el nombre del archivo\n");
         return 1;
     }
 
     strcpy(nombreArch, argv[1]);
-    
-    if (argc >= 3 && argv[2] != NULL && strlen(argv[2]) > 1) {
+
+    if (argc >= 3 && argv[2] != NULL && strlen(argv[2]) > 1)
+    {
         flag_dis = argv[2][1];
     }
 
@@ -408,9 +465,8 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
 
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP])!=-1)
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis); 
-    
-    
+    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]) != -1)
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis);
+
     return 0;
 }
