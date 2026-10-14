@@ -3,5 +3,6 @@
 #include "TIPOS.h"
 
 void guardar_imagen(int, char [], int [], int[], unsigned char[]);
+void cargar_imagen(int *, char [], int [], int [], unsigned char[]);
 
 #endif

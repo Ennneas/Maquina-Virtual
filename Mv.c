@@ -332,7 +332,7 @@ void inicializa_registros(int tabla_segmentos[], int registros[], int poscodes, 
     registros[IP] = poscodes << 16;
 }
 
-void inicializar_tabla(int tabla_segmentos[], int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioPS, int tamanioKS)
+void inicializar_tabla(int tabla_segmentos[], int registros[], int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioPS, int tamanioKS)
 {
     int tamanios[6] = {tamanioPS, tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
     // PS=31, KS=30, CS=26, DS=27, ES=28, SS=29
@@ -357,7 +357,7 @@ void inicializar_tabla(int tabla_segmentos[], int tamanioCS, int tamanioDS, int 
 
     if (base > memoria_total)
     {
-        printf("memoria insuficiente");
+        printf("Memoria insuficiente");
     }
 }
 void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])

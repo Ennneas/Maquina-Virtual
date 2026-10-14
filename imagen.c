@@ -8,7 +8,7 @@ void guardar_imagen(int tamamio_MP, char nombre[], int registros[], int tabla_se
     int i, reg, seg;
     unsigned char tam[2], aux[4], version;
     FILE* arch;
-    if (nombre[0] != '\0'){ //No voy a usar nombre como puntero
+    if (nombre[0] != '\0'){ //No voy a usar nombre como puntero asi que no valido que no sea nulo
         arch = fopen(nombre, "wb");
         if (arch != NULL){
             fwrite("VMI26", sizeof(char), 5, arch);
@@ -35,6 +35,42 @@ void guardar_imagen(int tamamio_MP, char nombre[], int registros[], int tabla_se
             }
             fwrite(MP, sizeof(unsigned char), tamamio_MP * 1024, arch);
             fclose(arch);
+        } else {
+            printf("Fallo al crear la imagen");
+        }
+    }
+}
+
+void cargar_imagen(int *tamanio_MP, char nombre[], int registros[], int tabla_segmentos[], unsigned char MP[]){
+    int i, reg, seg;
+    unsigned char tam[2], aux[4], cabecera[6], version;
+    FILE* arch;
+    if (nombre[0] != '\0'){
+        arch = fopen(nombre, "rb");
+        if (arch != NULL){
+            fread(cabecera, sizeof(unsigned char), 5, arch);
+            cabecera[5] = '\0';
+            if (strcmp(cabecera, "VMI26") == 0){
+                fread(&version, sizeof(unsigned char), 1, arch);
+                if (version == 1){
+                    fread(tam, sizeof(unsigned char), 2, arch);
+                    *tamanio_MP = (tam[0] << 8) | tam[1];
+                    for (i = 0; i < CANT_REGS; i++){
+                        fread(aux, sizeof(unsigned char), 4, arch);
+                        reg = (aux[0] << 24) | (aux[1] << 16) | (aux[2] << 8) | aux[3];
+                        registros[i] = reg;
+                    }
+                    for (i = 0; i < TAM_TABLA; i++){
+                        fread(aux, sizeof(unsigned char), 4, arch);
+                        seg = (aux[0] << 24) | (aux[1] << 16) | (aux[2] << 8) | aux[3];
+                        tabla_segmentos[i] = seg;
+                    }
+                    fread(MP, sizeof(unsigned char), (*tamanio_MP) * 1024, arch);
+                }
+            }
+            fclose(arch);
+        } else {
+            printf("Error al abrir el archivo");
         }
     }
 }
