@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 //Inicializar nombre de la imagen en el main
-//El tamanio va a estar en Kib??
+//El tamanio va a estar en Kib
 void guardar_imagen(int tamamio_MP, char nombre[], int registros[], int tabla_segmentos[], unsigned char MP[]){
     int i, reg, seg;
     unsigned char tam[2], aux[4], version;

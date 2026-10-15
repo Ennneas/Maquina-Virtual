@@ -447,6 +447,8 @@ int main(int argc, char *argv[])
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
 
+    //Insertar funcion configurar debug despues de que se lean los argumentos del programa
+
     if (argc < 2)
     {
         printf("Falta el nombre del archivo\n");
@@ -465,8 +467,10 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
 
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]) != -1)
+    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]) != -1){
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis);
+        verificar_paso_a_paso(registros, tabla_segmentos, MP);
+    }
 
     return 0;
 }

@@ -1,4 +1,19 @@
 #include "funciones.h"
+#include "imagen.h"
+#include <string.h>
+
+static char nombre_vmi[256] = "";
+static int tamanio_MP = 16;
+static int paso_a_paso = 0;
+
+void configurar_debug(char nombre[], int tamanio){
+    if (nombre[0] != '\0')
+        strcpy(nombre_vmi, nombre);
+    else
+        nombre_vmi[0] = '\0';
+    tamanio_MP = tamanio;
+}
+
 void actualiza_CC(int registros[], long long int resu_s, unsigned long long int resu_u, int valor)
 {
     
@@ -589,6 +604,31 @@ void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tab
         }
     }
 }
+
+void ejecutar_breakpoint(int registros[], int tabla_segmentos[], unsigned char MP[]){
+    char indicador_debug[10]; //Sobra espacio por las dudas
+    if(nombre_vmi[0] != '\0'){
+        guardar_imagen(tamanio_MP, nombre_vmi, registros, tabla_segmentos, MP);
+        do {
+            //Uso fgets en lugar de scanf para leer el enter y para mas seguridad
+            fgets(indicador_debug, sizeof(indicador_debug), stdin);
+            if (indicador_debug[0] == '\n')
+                paso_a_paso = 1;
+            else if(indicador_debug[0] == 'g')
+                paso_a_paso = 0;
+            else if(indicador_debug[0] == 'q')
+                registros[IP] = -1;
+            else
+                printf("Comando invalido, por favor intente de vuelta \n");
+        } while (indicador_debug[0] != '\n' && indicador_debug[0] != 'g' && indicador_debug[0] != 'q');
+    }
+}
+
+void verificar_paso_a_paso(int registros[], int tabla_segmentos[], unsigned char MP[]){
+    if (paso_a_paso == 1 && registros[IP] != -1)
+        ejecutar_breakpoint(registros, tabla_segmentos, MP);
+}
+
 void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     int llamada = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -598,14 +638,16 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int dir_log = registros[EDX];                  // puntero inicial
     if (llamada == 1){
         sys_read(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    }else 
-        if (llamada == 2)
+    }else if (llamada == 2){
         sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    else
-    {
+    }else if (llamada == 15){
+        if (nombre_vmi[0] != '\0')
+            paso_a_paso = 1; //Simula que el usuario puso paso a paso para que el proximo breakpoint se active siempre y ahi realmente decida el usuario
+    }else {
         printf("\nLlamada al sistema invalida");
         //registros[IP] = -1;
     }
+
 }
 void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // Lee el operando 2 al ser una funcion de un solo operando
 {
