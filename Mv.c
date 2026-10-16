@@ -332,9 +332,21 @@ void inicializa_registros(int tabla_segmentos[], int registros[], int poscodes, 
     registros[IP] = poscodes << 16;
 }
 
-void inicializar_tabla(int tabla_segmentos[], int registros[], int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioPS, int tamanioKS)
+int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
 {
-    int tamanios[6] = {tamanioPS, tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
+    int tam = 0, i;
+    if (flag_param == 'p')
+    {
+        for (i = 0; i < cantparam; i++)
+            tam += strlen(parametros[i]) + 1; // string + '\0'
+        tam += 4 * cantparam;                 // un puntero de 4 bytes por string
+    }
+    return tam;
+}
+
+void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param)
+{
+    int tamanios[6] = {calculartamanioPS(parametros, n, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
     // PS=31, KS=30, CS=26, DS=27, ES=28, SS=29
     int reg_seg[6] = {31, 30, 26, 27, 28, 29};
     int i;
@@ -360,7 +372,7 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], int tamanioCS, in
         printf("Memoria insuficiente");
     }
 }
-void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
+void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[], char *parametros[], int cantparam, char flag_param)
 {
     int i = 0, version, tamanioCS = 0, j = 0, k = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0;
     char x, identificador[6];
@@ -434,32 +446,55 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[])
         printf("\n Archivo inexsistente ");
     if (i >= 17)
     {
-        inicializar_tabla(tabla_segmentos, tamanioCS);
+        inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_param);
     }
     fclose(Ar);
 }
 
 int main(int argc, char *argv[])
 {
-    char nombreArch[256], flag_dis = '\0';
+    char nombreArch[256] = "\0", flag_dis = '\0', flag_param = '\0', nombre_vmi[256] = "\0";
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
     Tmnemonicos VMnemonicos[CANT_MNE];
+    int caantparam = 0, i, memoria_kib = 16;
+    char *parametros[30];
 
-    //Insertar funcion configurar debug despues de que se lean los argumentos del programa
+    // Insertar funcion configurar debug despues de que se lean los argumentos del programa
 
-    if (argc < 2)
+    for (i = 1; i < argc; i++)
     {
-        printf("Falta el nombre del archivo\n");
-        return 1;
+        if (flag_p)
+        {
+            parametros[cantparam++] = argv[i]; // después de -p, todo es parámetro
+        }
+        else if (strcmp(argv[i], "-p") == 0)
+        {
+            flag_p = 'p';
+        }
+        else if (strcmp(argv[i], "-d") == 0)
+        {
+            flag_d = 'd';
+        }
+        else if (strncmp(argv[i], "m=", 2) == 0)
+        {
+            memoria_kib = atoi(argv[i] + 2); // atoi convierte texto en entero
+        }
+        else if (strstr(argv[i], ".vmx"))
+        {
+            nombreArch = argv[i];
+        }
+        else if (strstr(argv[i], ".vmi"))
+        {
+            nombre_vmi = argv[i];
+        }
     }
 
-    strcpy(nombreArch, argv[1]);
-
-    if (argc >= 3 && argv[2] != NULL && strlen(argv[2]) > 1)
+    if (nombre_vmx == NULL && nombre_vmi == NULL)
     {
-        flag_dis = argv[2][1];
+        printf("Falta el archivo .vmx y/o .vmi\n");
+        return 1;
     }
 
     leer_codigo(MP, tabla_segmentos, nombreArch);
@@ -467,7 +502,8 @@ int main(int argc, char *argv[])
     cargar_mnemonicos(VMnemonicos);
 
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]) != -1){
+    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]) != -1)
+    {
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis);
         verificar_paso_a_paso(registros, tabla_segmentos, MP);
     }
