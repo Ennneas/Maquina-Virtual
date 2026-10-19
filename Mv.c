@@ -324,14 +324,6 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         printf("\n SEGMENTATION FAULT");
     }
 }
-void inicializa_registros(int tabla_segmentos[], int registros[], int poscodes, int posdatas)
-{
-    int i, j;
-    registros[CS] = poscodes << 16;
-    registros[DS] = posdatas << 16;
-    registros[IP] = poscodes << 16;
-}
-
 int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
 {
     int tam = 0, i;
@@ -344,7 +336,7 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
     return tam;
 }
 
-void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param)
+void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param,int offsetEP)
 {
     int tamanios[6] = {calculartamanioPS(parametros, n, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
     // PS=31, KS=30, CS=26, DS=27, ES=28, SS=29
@@ -370,6 +362,9 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     if (base > memoria_total)
     {
         printf("Memoria insuficiente");
+    }else{
+        registros[IP]=registros[CS]+offsetEP;
+        registros[BP]=registros[SP];
     }
 }
 void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[], char *parametros[], int cantparam, char flag_param)
@@ -446,7 +441,7 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[],
         printf("\n Archivo inexsistente ");
     if (i >= 17)
     {
-        inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_param);
+        inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_param,offsetEP);
     }
     fclose(Ar);
 }

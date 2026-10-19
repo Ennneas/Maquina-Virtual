@@ -12,6 +12,8 @@
 #define LAR 4
 #define MAR 5
 #define MBR 6
+#define SP 7
+#define BP 8
 #define EAX 10
 #define EBX 11
 #define ECX 12
@@ -22,6 +24,10 @@
 #define CC 17
 #define CS 26
 #define DS 27
+#define ES 28
+#define SS 29
+#define KS 30
+#define PS 31
 #define TAM_TABLA 8
 #define CANT_REGS 32
 #define CANT_MNE 27

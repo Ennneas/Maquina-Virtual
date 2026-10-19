@@ -224,6 +224,22 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
     strcpy(vectormnemonico[26].mnemonico, "NOT");
     vectormnemonico[26].codigo = 0x0A;
     vectormnemonico[26].ejecuta = NOT;
+    
+    strcpy(vectormnemonico[27].mnemonico, "PUSH");
+    vectormnemonico[27].codigo = 0x0B;
+    vectormnemonico[27].ejecuta = PUSH;
+
+    strcpy(vectormnemonico[28].mnemonico, "POP");
+    vectormnemonico[28].codigo = 0x0C;
+    vectormnemonico[28].ejecuta = POP;
+
+    strcpy(vectormnemonico[29].mnemonico, "CALL");
+    vectormnemonico[29].codigo = 0x0D;
+    vectormnemonico[29].ejecuta = CALL;
+
+    strcpy(vectormnemonico[30].mnemonico, "RET");
+    vectormnemonico[30].codigo = 0x0E;
+    vectormnemonico[30].ejecuta = RET;
 }
 // ===== Dos operandos =====
 void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned char MP[], int valor_leido)
@@ -751,4 +767,55 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
     //NOT no puede tener overflow ni carry
     actualiza_CC(registros, (long long int)valor, (unsigned long long int)(unsigned int)valor, valor);
+}
+void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
+    int32_t Valor_para_pila;
+    Valor_para_pila=lectura(tipo2,OP2,registros,tabla_segmentos,MP);
+    if (registros[SP]-4< registros[ES]){
+        printf("STACK OVERFLOW");
+        registros[IP]=-1;
+    }else{//escribe siempre en memoria, por eso no uso escritura
+        registros[SP]-=4;
+        int8_t i;
+            for (i=0;i<4;i++)
+                MP[registros[SP]-i]=(Valor_para_pila >> (8 * (3-i)))//big endian
+            registros[SP]-=4;
+    }
+
+}
+void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
+    int32_t Valor_de_pila=0;
+    if (registros[SP]+ 4 > registros[ES]+tabla_segmentos[]){
+        printf("STACK UNDERFLOW");
+        registros[IP]=-1;
+    }else{//"lee" siempre en memoria, por eso no uso lectura
+        registros[SP]-=4;
+        int8_t i;
+            for (i=0;i<4;i++)
+                Valor_de_pila << 8 *i=MP[registros[SP]+i] //big endian
+            registros[SP]+=4;
+    }
+    escritura(0,tipo2,OP2,registros,tabla_segmentos,MP,Valor_de_pila);
+
+}
+void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){ //call hace muchas cosas fuera de la estructura que veniamos teniendo
+    //entonces hay que cargar en OP2 ip ,para escribirlo
+    int32_t offset_subrutina=0;
+    offset_subrutina=lectura(tipo2,OP2,registros,tabla_segmentos,MP);
+    //cargo OP2 con IP, luego de leer el ofset, para pushear IP
+    registros[OP2] = 0x0; //codigo del registro IP completo 
+    
+    //push IP
+    PUSH(0,2,OP2,registros,MP,tabla_segmentos);
+    //ahora el JMP a la subrutina
+    registros[OP2] =offset_subrutina;
+    JMP(0,3,OP2,registros,MP,tabla_segmentos); 
+}
+void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
+     //cargo OP2 con IP, para popear el valor del ret
+    registros[OP2] = 0x0; //codigo del registro IP completo
+    POP(0,1,registros,MP,tabla_segmentos);
+    //cargo OP2 con el contenido de IP para hacer el JMP, como es un inmediato solmente lo asigno
+    registros[OP2]=registros[IP];
+    JMP(0,3,registros,MP,tabla_segmentos);
 }
