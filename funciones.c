@@ -6,7 +6,8 @@ static char nombre_vmi[256] = "";
 static int tamanio_MP = 16;
 static int paso_a_paso = 0;
 
-void configurar_debug(char nombre[], int tamanio){
+void configurar_debug(char nombre[], int tamanio)
+{
     if (nombre[0] != '\0')
         strcpy(nombre_vmi, nombre);
     else
@@ -16,41 +17,47 @@ void configurar_debug(char nombre[], int tamanio){
 
 void actualiza_CC(int registros[], long long int resu_s, unsigned long long int resu_u, int valor)
 {
-    
+
     int Z = 0, N = 0, C = 0, V = 0;
     if ((valor >> 31) & 1)
         N = 1;
     if (valor == 0)
         Z = 1;
-    if ((resu_u >> 32) != 0) 
+    if ((resu_u >> 32) != 0)
         C = 1;
-    if (resu_s != valor) 
+    if (resu_s != valor)
         V = 1;
-    registros[CC] = (N << 31) | (Z << 30) | (C << 29) | (V << 28); 
+    registros[CC] = (N << 31) | (Z << 30) | (C << 29) | (V << 28);
 }
 void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
-    int Direccion_Fisica, valor, i, offset, Dire_logica;
+    int Direccion_Fisica, valor, i, offset, Dire_logica, cant;
     offset = (registros[OP] & 0x00FFFF00) >> 8;
     Dire_logica = registros[registros[OP] & 0b00000000000000000000000000011111];
     Dire_logica += offset;
 
     registros[LAR] = Dire_logica;
-    registros[MAR] = 4 << 16; // MAR parte alta
+    registros[MAR] = cant << 16; // MAR parte alta
 
-    Direccion_Fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
-    if (Direccion_Fisica!=-1){
+    cant = (registros[OP] >> 5) & 0x7;
+    if (cant != 1 && cant != 2)
+        cant = 4;
+    Direccion_Fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], cant);
+    if (Direccion_Fisica != -1)
+    {
         registros[MAR] |= Direccion_Fisica; // MAR parte baja
 
         registros[MBR] = 0;
-        for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
+        for (i = 0; i < cant; i++)
         {
-            registros[MBR] += MP[Direccion_Fisica + i] << (8 * (4 - 1 - i));
+            registros[MBR] += MP[Direccion_Fisica + i] << (8 * (cant - 1 - i));
         }
-    }else{                
-            registros[IP] = -1; // en el caso que no haya un stop
-            printf("\n SEGMENTATION FAULT");
-        }
+    }
+    else
+    {
+        registros[IP] = -1; // en el caso que no haya un stop
+        printf("\n SEGMENTATION FAULT");
+    }
 }
 int valida_instruccion(int opc, Tmnemonicos VMnemonicos[], int *indice_Mnmenonico)
 {
@@ -79,7 +86,7 @@ void carga_operandos(int t1, int t2, int registros[], unsigned char MP[], int Di
     }
     registros[OP1] |= t1 << 24;
 }
-int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro)
+int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro, int cant)
 {
 
     int offset = registro & 0x0000FFFF;
@@ -90,18 +97,27 @@ int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro)
     int limite = tabla_segmentos[pos] & 0x0000FFFF; // Tamaño del segmento
     int direccionfisica = direccionbase + offset;
 
-    if (offset < limite)
+    if (offset + cant < limite)
         return direccionfisica;
     else
         return -1;
 }
 int lectura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
-    int posl, registroleer;
+    int posl, registroleer, sector, cant, valor;
     if (tipo == 0b11)
     {
+        cant = (registros[OP] >> 5) & 0x7;
+        if (cant != 1 && cant != 2)
+            cant = 4;
         lee_memoria(OP, registros, tabla_segmentos, MP);
-        return registros[MBR];
+
+        if (cant == 1)
+            return (int)(signed char)(registros[MBR] & 0xFF); // byte: extiendo signo
+        else if (cant == 2)
+            return (int)(short int)(registros[MBR] & 0xFFFF); // word: extiendo signo
+        else
+            return registros[MBR];
     }
     else if (tipo == 0b10)
     { // inmediato
@@ -110,7 +126,17 @@ int lectura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned c
     else
     { // registro
         registroleer = registros[OP] & 0b00000000000000000000000000011111;
-        return registros[registroleer];
+        sector = (registros[OP] >> 5) & 0x3;
+        valor = registros[registroleer];
+
+        if (sector == 0)
+            return valor;
+        else if (sector == 1)
+            return (int)(signed char)(valor & 0xFF);
+        else if (sector == 2)
+            return (int)(signed char)((valor >> 8) & 0xFF);
+        else
+            return (int)(short int)(valor & 0xFFFF);
     }
 }
 void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
@@ -224,7 +250,7 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
     strcpy(vectormnemonico[26].mnemonico, "NOT");
     vectormnemonico[26].codigo = 0x0A;
     vectormnemonico[26].ejecuta = NOT;
-    
+
     strcpy(vectormnemonico[27].mnemonico, "PUSH");
     vectormnemonico[27].codigo = 0x0B;
     vectormnemonico[27].ejecuta = PUSH;
@@ -244,21 +270,29 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
 // ===== Dos operandos =====
 void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned char MP[], int valor_leido)
 {
-    int direcF, cod_registro, i, offset, base;
+    int direcF, cod_registro, i, offset, base, cant, sector;
     if (tipo == 3)
     {
         offset = (registros[OP] & 0x00FFFF00);
+
+        cant = (registros[OP] >> 5) & 0x7; // estos tres bits te dicen la cantidad de bytes
+        if (cant != 1 && cant != 2)
+            cant = 4;
+
         offset = offset >> 8;
         registros[LAR] = registros[registros[OP] & 0x01F] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
-        registros[MAR] = 4 << 16;                                                                // reset MAR
+        registros[MAR] = cant << 16;                                // reset MAR
         direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
-        if (direcF!=-1){
+        if (direcF != -1)
+        {
             registros[MAR] |= direcF; // MAR parte baja
             for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
             {
                 MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria,big endian o little??
             }
-        }else{                
+        }
+        else
+        {
             registros[IP] = -1; // en el caso que no haya un stop
             printf("\n SEGMENTATION FAULT");
         }
@@ -266,7 +300,16 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
     else
     {
         cod_registro = registros[OP] & 0x1F;
-        registros[cod_registro] = valor_leido;
+        sector = (registros[OP] >> 5) & 0x3;
+
+        if (sector == 0)
+            registros[cod_registro] = valor_leido;
+        else if (sector == 1)
+            registros[cod_registro] = (registros[cod_registro] & 0xFFFFFF00) | (valor_leido & 0xFF);
+        else if (sector == 2)
+            registros[cod_registro] = (registros[cod_registro] & 0xFFFF00FF) | ((valor_leido & 0xFF) << 8);
+        else
+            registros[cod_registro] = (registros[cod_registro] & 0xFFFF0000) | (valor_leido & 0xFFFF);
     }
 }
 void MOV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
@@ -299,11 +342,11 @@ void SUB(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     unsigned long long int resu_u;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    if (valor1 > 32768) //como los inmediatos son de  16 bits  y van de -32768 a 32768, si es mayor a 32768, entonces es negativo 
-        valor1=valor1-65536;
-    if (valor2 > 32768) //si quiero restar 2 direcciones de memoria????
-        valor2=valor2-65536;//solo si el negativo "viene" de un inmediato
-    
+    if (valor1 > 32768) // como los inmediatos son de  16 bits  y van de -32768 a 32768, si es mayor a 32768, entonces es negativo
+        valor1 = valor1 - 65536;
+    if (valor2 > 32768)          // si quiero restar 2 direcciones de memoria????
+        valor2 = valor2 - 65536; // solo si el negativo "viene" de un inmediato
+
     resu_s = (long long int)valor1 - (long long int)valor2;
     resta = (int)resu_s;
 
@@ -341,7 +384,7 @@ void DIV(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         registros[AC] = resto;
         div = (int)resu_s;
         escritura(tipo1, OP1, registros, tabla_segmentos, MP, div);
-        //DIV nunca agranda el numero por lo que no puede haber carry
+        // DIV nunca agranda el numero por lo que no puede haber carry
         actualiza_CC(registros, resu_s, (unsigned long long int)(unsigned int)div, div);
     }
     else
@@ -372,8 +415,8 @@ void AND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     res_and = valor1 & valor2;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_and);
-    //AND no puede tener overflow ni carry
-    actualiza_CC(registros, (long long int)res_and, (unsigned long long int)(unsigned int)res_and, res_and); 
+    // AND no puede tener overflow ni carry
+    actualiza_CC(registros, (long long int)res_and, (unsigned long long int)(unsigned int)res_and, res_and);
 }
 
 void OR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
@@ -385,7 +428,7 @@ void OR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_seg
     res_or = valor1 | valor2;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_or);
 
-    //OR no puede tener overflow ni carry
+    // OR no puede tener overflow ni carry
     actualiza_CC(registros, (long long int)res_or, (unsigned long long int)(unsigned int)res_or, res_or);
 }
 
@@ -397,7 +440,7 @@ void XOR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     res_xor = valor1 ^ valor2;
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_xor);
 
-    //XOR no puede tener overflow ni carry
+    // XOR no puede tener overflow ni carry
     actualiza_CC(registros, (long long int)res_xor, (unsigned long long int)(unsigned int)res_xor, res_xor);
 }
 
@@ -419,9 +462,9 @@ void SWAP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
     res_xor = valorA ^ valorB; // XOR A, B  -> A
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, res_xor);
 
-    //XOR no puede tener overflow ni carry
-    //CC según el último XOR
-    actualiza_CC(registros, (long long int)res_xor, (unsigned long long int)(unsigned int)res_xor, res_xor); 
+    // XOR no puede tener overflow ni carry
+    // CC según el último XOR
+    actualiza_CC(registros, (long long int)res_xor, (unsigned long long int)(unsigned int)res_xor, res_xor);
 }
 
 void SHL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // PREGUNTAR como es cc con los shift
@@ -478,7 +521,7 @@ void SAR(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 }
 
 void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ 
+{
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
@@ -487,17 +530,16 @@ void LDL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 }
 
 void LDH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ 
+{
     int valor1, valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
     resultado = (valor2 << 16) | (valor1 & 0x0000FFFF);
     escritura(tipo1, OP1, registros, tabla_segmentos, MP, resultado);
-
 }
 
 void RND(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ 
+{
     int valor2, resultado;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
 
@@ -590,7 +632,7 @@ void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tab
     for (i = 0; i < cant; i++)
     {
         direccion_fisica = traduce_y_setea_MAR(dir_log + i * tam, tam, registros, tabla_segmentos);
-        printf("\ndireccion_fisica:%d",direccion_fisica );
+        printf("\ndireccion_fisica:%d", direccion_fisica);
         if (direccion_fisica == -1)
         {
             printf("\nError: fallo de segmento");
@@ -615,24 +657,28 @@ void sys_read(int dir_log, int cant, int tam, int modo, int registros[], int tab
             scanf("%d", &valor);
 
         registros[MBR] = valor;
-        for (j = 0; j < tam; j++){
+        for (j = 0; j < tam; j++)
+        {
             MP[direccion_fisica + j] = (valor >> (8 * (tam - 1 - j))) & 0xFF;
         }
     }
 }
 
-void ejecutar_breakpoint(int registros[], int tabla_segmentos[], unsigned char MP[]){
-    char indicador_debug[10]; //Sobra espacio por las dudas
-    if(nombre_vmi[0] != '\0'){
+void ejecutar_breakpoint(int registros[], int tabla_segmentos[], unsigned char MP[])
+{
+    char indicador_debug[10]; // Sobra espacio por las dudas
+    if (nombre_vmi[0] != '\0')
+    {
         guardar_imagen(tamanio_MP, nombre_vmi, registros, tabla_segmentos, MP);
-        do {
-            //Uso fgets en lugar de scanf para leer el enter y para mas seguridad
+        do
+        {
+            // Uso fgets en lugar de scanf para leer el enter y para mas seguridad
             fgets(indicador_debug, sizeof(indicador_debug), stdin);
             if (indicador_debug[0] == '\n')
                 paso_a_paso = 1;
-            else if(indicador_debug[0] == 'g')
+            else if (indicador_debug[0] == 'g')
                 paso_a_paso = 0;
-            else if(indicador_debug[0] == 'q')
+            else if (indicador_debug[0] == 'q')
                 registros[IP] = -1;
             else
                 printf("Comando invalido, por favor intente de vuelta \n");
@@ -640,7 +686,8 @@ void ejecutar_breakpoint(int registros[], int tabla_segmentos[], unsigned char M
     }
 }
 
-void verificar_paso_a_paso(int registros[], int tabla_segmentos[], unsigned char MP[]){
+void verificar_paso_a_paso(int registros[], int tabla_segmentos[], unsigned char MP[])
+{
     if (paso_a_paso == 1 && registros[IP] != -1)
         ejecutar_breakpoint(registros, tabla_segmentos, MP);
 }
@@ -649,21 +696,27 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 {
     int llamada = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     int modo = registros[EAX];
-    int cant = registros[ECX] & 0x0000FFFF;        // cantidad de celdas
-    int tam = (registros[ECX] >> 16); // tamaño de c/celda
-    int dir_log = registros[EDX];                  // puntero inicial
-    if (llamada == 1){
+    int cant = registros[ECX] & 0x0000FFFF; // cantidad de celdas
+    int tam = (registros[ECX] >> 16);       // tamaño de c/celda
+    int dir_log = registros[EDX];           // puntero inicial
+    if (llamada == 1)
+    {
         sys_read(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    }else if (llamada == 2){
-        sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    }else if (llamada == 15){
-        if (nombre_vmi[0] != '\0')
-            paso_a_paso = 1; //Simula que el usuario puso paso a paso para que el proximo breakpoint se active siempre y ahi realmente decida el usuario
-    }else {
-        printf("\nLlamada al sistema invalida");
-        //registros[IP] = -1;
     }
-
+    else if (llamada == 2)
+    {
+        sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
+    }
+    else if (llamada == 15)
+    {
+        if (nombre_vmi[0] != '\0')
+            paso_a_paso = 1; // Simula que el usuario puso paso a paso para que el proximo breakpoint se active siempre y ahi realmente decida el usuario
+    }
+    else
+    {
+        printf("\nLlamada al sistema invalida");
+        // registros[IP] = -1;
+    }
 }
 void JMP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]) // Lee el operando 2 al ser una funcion de un solo operando
 {
@@ -765,57 +818,65 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor = ~valor;
     escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
-    //NOT no puede tener overflow ni carry
+    // NOT no puede tener overflow ni carry
     actualiza_CC(registros, (long long int)valor, (unsigned long long int)(unsigned int)valor, valor);
 }
-void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
+void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
     int32_t Valor_para_pila;
-    Valor_para_pila=lectura(tipo2,OP2,registros,tabla_segmentos,MP);
-    if (registros[SP]-4< registros[ES]){
+    Valor_para_pila = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
+    if (registros[SP] - 4 < registros[ES])
+    {
         printf("STACK OVERFLOW");
-        registros[IP]=-1;
-    }else{//escribe siempre en memoria, por eso no uso escritura
-        registros[SP]-=4;
-        int8_t i;
-            for (i=0;i<4;i++)
-                MP[registros[SP]-i]=(Valor_para_pila >> (8 * (3-i)))//big endian
-            registros[SP]-=4;
+        registros[IP] = -1;
     }
-
+    else
+    { // escribe siempre en memoria, por eso no uso escritura
+        registros[SP] -= 4;
+        int8_t i;
+        for (i = 0; i < 4; i++)
+            MP[registros[SP] - i] = (Valor_para_pila >> (8 * (3 - i))) // big endian
+                registros[SP] -= 4;
+    }
 }
-void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
-    int32_t Valor_de_pila=0;
-    if (registros[SP]+ 4 > registros[ES]+tabla_segmentos[]){
+void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    int32_t Valor_de_pila = 0;
+    if (registros[SP] + 4 > registros[ES] + tabla_segmentos[])
+    {
         printf("STACK UNDERFLOW");
-        registros[IP]=-1;
-    }else{//"lee" siempre en memoria, por eso no uso lectura
-        registros[SP]-=4;
-        int8_t i;
-            for (i=0;i<4;i++)
-                Valor_de_pila << 8 *i=MP[registros[SP]+i] //big endian
-            registros[SP]+=4;
+        registros[IP] = -1;
     }
-    escritura(0,tipo2,OP2,registros,tabla_segmentos,MP,Valor_de_pila);
+    else
+    { //"lee" siempre en memoria, por eso no uso lectura
+        registros[SP] -= 4;
+        int8_t i;
+        for (i = 0; i < 4; i++)
+            Valor_de_pila << 8 *i = MP[registros[SP] + i] // big endian
+                registros[SP] += 4;
+    }
+    escritura(0, tipo2, OP2, registros, tabla_segmentos, MP, Valor_de_pila);
+}
+void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{ // call hace muchas cosas fuera de la estructura que veniamos teniendo
+    // entonces hay que cargar en OP2 ip ,para escribirlo
+    int32_t offset_subrutina = 0;
+    offset_subrutina = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
+    // cargo OP2 con IP, luego de leer el ofset, para pushear IP
+    registros[OP2] = 0x0; // codigo del registro IP completo
 
+    // push IP
+    PUSH(0, 2, OP2, registros, MP, tabla_segmentos);
+    // ahora el JMP a la subrutina
+    registros[OP2] = offset_subrutina;
+    JMP(0, 3, OP2, registros, MP, tabla_segmentos);
 }
-void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){ //call hace muchas cosas fuera de la estructura que veniamos teniendo
-    //entonces hay que cargar en OP2 ip ,para escribirlo
-    int32_t offset_subrutina=0;
-    offset_subrutina=lectura(tipo2,OP2,registros,tabla_segmentos,MP);
-    //cargo OP2 con IP, luego de leer el ofset, para pushear IP
-    registros[OP2] = 0x0; //codigo del registro IP completo 
-    
-    //push IP
-    PUSH(0,2,OP2,registros,MP,tabla_segmentos);
-    //ahora el JMP a la subrutina
-    registros[OP2] =offset_subrutina;
-    JMP(0,3,OP2,registros,MP,tabla_segmentos); 
-}
-void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[]){
-     //cargo OP2 con IP, para popear el valor del ret
-    registros[OP2] = 0x0; //codigo del registro IP completo
-    POP(0,1,registros,MP,tabla_segmentos);
-    //cargo OP2 con el contenido de IP para hacer el JMP, como es un inmediato solmente lo asigno
-    registros[OP2]=registros[IP];
-    JMP(0,3,registros,MP,tabla_segmentos);
+void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
+{
+    // cargo OP2 con IP, para popear el valor del ret
+    registros[OP2] = 0x0; // codigo del registro IP completo
+    POP(0, 1, registros, MP, tabla_segmentos);
+    // cargo OP2 con el contenido de IP para hacer el JMP, como es un inmediato solmente lo asigno
+    registros[OP2] = registros[IP];
+    JMP(0, 3, registros, MP, tabla_segmentos);
 }

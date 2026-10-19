@@ -478,11 +478,11 @@ int main(int argc, char *argv[])
         }
         else if (strstr(argv[i], ".vmx"))
         {
-            nombreArch = argv[i];
+            strcpy(nombreArch,argv[i]);
         }
         else if (strstr(argv[i], ".vmi"))
         {
-            nombre_vmi = argv[i];
+            strcpy(nombre_vmi,argv[i]);
         }
     }
 
