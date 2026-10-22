@@ -335,17 +335,20 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
     }
     return tam;
 }
-void inicializa_pila (int registros[],int tabla_segmentos[],unsigned char MP[],int argc,char *parametros[30],int16_t entrypoint){
+void inicializa_pila (Tmnemonicos vmnemonicos[],int registros[],int tabla_segmentos[],unsigned char MP[],int argc,char *parametros[30],int16_t entrypoint){
     int i=0,offset_SP;
     offset_SP=(tabla_segmentos[registros[SS] >> 16]);
     registros[BP]=registros[SP]= registros[SS] + offset_SP; //inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     //subrutina principal
+        //argc
     registros[OP2]=argc;
-    PUSH(0,3,registros,MP,tabla_segmentos);//argc
+    vmemonicos[27].ejecuta(0,3,registros,MP,tabla_segmentos);
+        //argv
     registros[OP2]=parametros;
-    PUSH(0,3,registros,MP,tabla_segmentos);//argv
-    registros[OP2]=entrypoint; //IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
-    CALL(0,1,registros,MP,tabla_segmentos);//RET == -1;
+    vmemonicos[27].ejecuta(0,3,registros,MP,tabla_segmentos);
+    //IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
+    registros[OP2]=entrypoint; 
+    vmemonicos[29].ejecuta(0,1,registros,MP,tabla_segmentos);//argc
 }
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param,int offsetEP)
 {
@@ -510,7 +513,7 @@ int main(int argc, char *argv[])
 
     leer_codigo(MP, tabla_segmentos, nombreArch,parametros,caantparam,flag_param,registros,&entrypoint);
     cargar_mnemonicos(VMnemonicos);
-    inicializa_pila(registros,tabla_segmentos,MP,argc,parametros,entrypoint); //subrutina principal
+    inicializa_pila(VMnemonicos,registros,tabla_segmentos,MP,argc,parametros,entrypoint); //subrutina principal
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
     while (registros[IP] != -1)
         while (continua_subrutina())
