@@ -342,13 +342,13 @@ void inicializa_pila (Tmnemonicos vmnemonicos[],int registros[],int tabla_segmen
     //subrutina principal
         //argc
     registros[OP2]=argc;
-    vmemonicos[27].ejecuta(0,3,registros,MP,tabla_segmentos);
+    vmemonicos[27].ejecuta(0,3,registros,MP,tabla_segmentos);//pushea argc
         //argv
     registros[OP2]=parametros;
-    vmemonicos[27].ejecuta(0,3,registros,MP,tabla_segmentos);
+    vmemonicos[27].ejecuta(0,3,registros,MP,tabla_segmentos);//pushea *argv
     //IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
     registros[OP2]=entrypoint; 
-    vmemonicos[29].ejecuta(0,1,registros,MP,tabla_segmentos);//argc
+    vmemonicos[29].ejecuta(0,1,registros,MP,tabla_segmentos);//llama a la subrutina principal
 }
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param,int offsetEP)
 {
