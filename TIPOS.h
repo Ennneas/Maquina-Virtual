@@ -30,7 +30,7 @@
 #define PS 31
 #define TAM_TABLA 8
 #define CANT_REGS 32
-#define CANT_MNE 27
+#define CANT_MNE 31
 #define MAX_MEMORIA 16384
 typedef void (* Pfunsion)(int ,int ,int[],unsigned char [],int []);
 typedef struct 

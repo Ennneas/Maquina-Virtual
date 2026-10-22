@@ -822,61 +822,117 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     actualiza_CC(registros, (long long int)valor, (unsigned long long int)(unsigned int)valor, valor);
 }
 void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{
-    int32_t Valor_para_pila;
-    Valor_para_pila = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
-    if (registros[SP] - 4 < registros[ES])
+{    
+    int32_t valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
+    int offset_sp = registros[SP] & 0x0000FFFF;
+    if (offset_sp < 4) // Stack Overflow (llegó al fondo del segmento SS)
     {
-        printf("STACK OVERFLOW");
+        printf("\nSTACK OVERFLOW");
         registros[IP] = -1;
+        return;
+    }
+    registros[SP] -= 4; // Decrementa antes de escribir
+    registros[LAR] = registros[SP];
+    registros[MAR] = 4 << 16;
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    if (dir_fisica != -1)
+    {
+        registros[MAR] |= dir_fisica;
+        registros[MBR] = valor;
+        for (int i = 0; i < 4; i++)
+            MP[dir_fisica + i] = (valor >> (8 * (3 - i))) & 0xFF; // Big Endian
     }
     else
-    { // escribe siempre en memoria, por eso no uso escritura
-        registros[SP] -= 4;
-        int8_t i;
-        for (i = 0; i < 4; i++)
-            MP[registros[SP] - i] = (Valor_para_pila >> (8 * (3 - i))) // big endian
-                registros[SP] -= 4;
+    {
+        printf("\nSEGMENTATION FAULT EN PUSH");
+        registros[IP] = -1;
     }
+
 }
 void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
-    int32_t Valor_de_pila = 0;
-    if (registros[SP] + 4 > registros[ES] + tabla_segmentos[])
+    int pos_ss = ((unsigned int)registros[SS] & 0xFFFF0000) >> 16;
+    int limite_ss = tabla_segmentos[pos_ss] & 0x0000FFFF;
+    int offset_sp = registros[SP] & 0x0000FFFF;
+    if (offset_sp + 4 > limite_ss) // Stack Underflow (pila vacía)
     {
-        printf("STACK UNDERFLOW");
+        printf("\nSTACK UNDERFLOW");
         registros[IP] = -1;
+        return;
+    }
+    registros[LAR] = registros[SP];
+    registros[MAR] = 4 << 16;
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    if (dir_fisica != -1)
+    {
+        registros[MAR] |= dir_fisica;
+        int32_t valor = 0;
+        for (int i = 0; i < 4; i++)
+            valor = (valor << 8) | (unsigned char)MP[dir_fisica + i];
+        registros[MBR] = valor;
+        registros[SP] += 4; // Incrementa luego de leer
+        escritura(tipo2, OP2, registros, tabla_segmentos, MP, valor);
     }
     else
-    { //"lee" siempre en memoria, por eso no uso lectura
-        registros[SP] -= 4;
-        int8_t i;
-        for (i = 0; i < 4; i++)
-            Valor_de_pila << 8 *i = MP[registros[SP] + i] // big endian
-                registros[SP] += 4;
+    {
+        printf("\nSEGMENTATION FAULT EN POP");
+        registros[IP] = -1;
     }
-    escritura(0, tipo2, OP2, registros, tabla_segmentos, MP, Valor_de_pila);
+    
 }
 void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{ // call hace muchas cosas fuera de la estructura que veniamos teniendo
-    // entonces hay que cargar en OP2 ip ,para escribirlo
-    int32_t offset_subrutina = 0;
-    offset_subrutina = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
-    // cargo OP2 con IP, luego de leer el ofset, para pushear IP
-    registros[OP2] = 0x0; // codigo del registro IP completo
-
-    // push IP
-    PUSH(0, 2, OP2, registros, MP, tabla_segmentos);
-    // ahora el JMP a la subrutina
-    registros[OP2] = offset_subrutina;
-    JMP(0, 3, OP2, registros, MP, tabla_segmentos);
+{
+    int32_t offset_subrutina = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
+    // 1. Apilar dirección de retorno (IP actual ya apunta a la prox instrucción)
+    int offset_sp = registros[SP] & 0x0000FFFF;
+    if (offset_sp < 4)
+    {
+        printf("\nSTACK OVERFLOW EN CALL");
+        registros[IP] = -1;
+        return;
+    }
+    registros[SP] -= 4;
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[SP]);
+    if (dir_fisica != -1)
+    {
+        int32_t dir_retorno = registros[IP];
+        for (int i = 0; i < 4; i++)
+            MP[dir_fisica + i] = (dir_retorno >> (8 * (3 - i))) & 0xFF;
+        // 2. Saltar a la subrutina
+        registros[IP] = (registros[CS] & 0xFFFF0000) | (offset_subrutina & 0x0000FFFF);
+    }
+    else
+    {
+        printf("\nSEGMENTATION FAULT EN CALL");
+        registros[IP] = -1;
+    }
 }
 void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
-    // cargo OP2 con IP, para popear el valor del ret
-    registros[OP2] = 0x0; // codigo del registro IP completo
-    POP(0, 1, registros, MP, tabla_segmentos);
-    // cargo OP2 con el contenido de IP para hacer el JMP, como es un inmediato solmente lo asigno
-    registros[OP2] = registros[IP];
-    JMP(0, 3, registros, MP, tabla_segmentos);
+    int pos_ss = ((unsigned int)registros[SS] & 0xFFFF0000) >> 16;
+    int limite_ss = tabla_segmentos[pos_ss] & 0x0000FFFF;
+    int offset_sp = registros[SP] & 0x0000FFFF;
+    if (offset_sp + 4 > limite_ss)
+    {
+        printf("\nSTACK UNDERFLOW EN RET");
+        registros[IP] = -1;
+        return;
+    }
+    registros[LAR] = registros[SP];
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    if (dir_fisica != -1)
+    {
+        int32_t dir_retorno = 0;
+        for (int i = 0; i < 4; i++)
+            dir_retorno = (dir_retorno << 8) | (unsigned char)MP[dir_fisica + i];
+        registros[SP] += 4;
+        // Solo actualizamos IP con la dirección recuperada. Ejecutaintrcuccionse encarga de lo demas
+        registros[IP] = dir_retorno;
+    }
+    else
+    {
+        printf("\nSEGMENTATION FAULT EN RET");
+        registros[IP] = -1;
+    }
+    
 }

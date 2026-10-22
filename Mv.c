@@ -335,7 +335,15 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
     }
     return tam;
 }
-
+void inicializa_pila (int registros[],int tabla_segmentos[],unsigned char MP[],int16_t entrypoint){
+    int i=0,offset_SP;
+    offset_SP=(tabla_segmentos[registros[SS] >> 16]);
+    registros[BP]=registros[SP]= registros[SS] + offset_SP; //inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
+    //subrutina principal
+    PUSH();
+    PUSH();
+    CALL();
+}
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param,int offsetEP)
 {
     int tamanios[6] = {calculartamanioPS(parametros, n, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
@@ -363,13 +371,12 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     {
         printf("Memoria insuficiente");
     }else{
-        registros[IP]=registros[CS]+offsetEP;
-        registros[BP]=registros[SP];
+        registros[IP]=-1;
     }
 }
-void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[], char *parametros[], int cantparam, char flag_param)
+void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[], char *parametros[], int cantparam, char flag_param,int registros [],int16_t *entrypoint)
 {
-    int i = 0, version, tamanioCS = 0, j = 0, k = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0;
+    int i = 0,j=0, version, tamanioCS = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0;
     char x, identificador[6];
     FILE *Ar;
     Ar = fopen(nombreArch, "rb");
@@ -428,10 +435,18 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[],
                     offsetEP += x;
                 }
             }
-            else if (strcmp(identificador, "VMX26") == 0 && version == 2) // agrego version es != 1 por las dudas
+            else 
+            if (strcmp(identificador, "VMX26") == 0 && (version == 2 || version == 1) ) // agrego version es != 1 por las dudas
             {
-                MP[k] = x;
-                k++;
+                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_param,offsetEP);
+                //cargar param segment
+                MP[Conversor_Memoria_Fisica(registros,CS)+j]=x;
+                j++;
+                if (j>tamanioCS)
+                {
+                    printf("TAMAÑO INCORRECTO DEL CODE SEGMENT");
+                    break;
+                }
             }
             else
                 break;
@@ -439,16 +454,14 @@ void leer_codigo(char MP[MAX_MEMORIA], int tabla_segmentos[], char nombreArch[],
         }
     else
         printf("\n Archivo inexsistente ");
-    if (i >= 17)
-    {
-        inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_param,offsetEP);
-    }
+    *entrypoint=offsetEP;
     fclose(Ar);
 }
 
 int main(int argc, char *argv[])
 {
     char nombreArch[256] = "\0", flag_dis = '\0', flag_param = '\0', nombre_vmi[256] = "\0";
+    int16_t entrypoint;
     int tabla_segmentos[TAM_TABLA];
     int registros[CANT_REGS];
     unsigned char MP[MAX_MEMORIA];
@@ -492,16 +505,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    leer_codigo(MP, tabla_segmentos, nombreArch);
-    inicializa_registros(tabla_segmentos, registros, 0, 1);
+    leer_codigo(MP, tabla_segmentos, nombreArch,parametros,caantparam,flag_param,registros,&entrypoint);
     cargar_mnemonicos(VMnemonicos);
-
+    inicializa_pila(registros,tabla_segmentos,MP,argc,parametros,entrypoint); //subrutina principal
     // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]) != -1)
-    {
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis);
-        verificar_paso_a_paso(registros, tabla_segmentos, MP);
-    }
-
+    while (registros[IP] != -1)
+        while (continua_subrutina())
+        {
+            ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_dis);
+            verificar_paso_a_paso(registros, tabla_segmentos, MP);
+        }
     return 0;
 }
