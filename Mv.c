@@ -335,14 +335,17 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
     }
     return tam;
 }
-void inicializa_pila (int registros[],int tabla_segmentos[],unsigned char MP[],int16_t entrypoint){
+void inicializa_pila (int registros[],int tabla_segmentos[],unsigned char MP[],int argc,char *parametros[30],int16_t entrypoint){
     int i=0,offset_SP;
     offset_SP=(tabla_segmentos[registros[SS] >> 16]);
     registros[BP]=registros[SP]= registros[SS] + offset_SP; //inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     //subrutina principal
-    PUSH();
-    PUSH();
-    CALL();
+    registros[OP2]=argc;
+    PUSH(0,3,registros,MP,tabla_segmentos);//argc
+    registros[OP2]=parametros;
+    PUSH(0,3,registros,MP,tabla_segmentos);//argv
+    registros[OP2]=entrypoint; //IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
+    CALL(0,1,registros,MP,tabla_segmentos);//RET == -1;
 }
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param,int offsetEP)
 {
