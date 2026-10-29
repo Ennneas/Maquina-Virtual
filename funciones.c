@@ -692,6 +692,64 @@ void verificar_paso_a_paso(int registros[], int tabla_segmentos[], unsigned char
         ejecutar_breakpoint(registros, tabla_segmentos, MP);
 }
 
+void string_read(int registros[], int tabla_segmentos[], unsigned char MP[]){
+    char c;
+    int i = 0, max_tam, dir, dir_fisica;
+    max_tam = registros[ECX]; 
+    dir = registros[EDX];
+    c = getchar(); // Leo caracter a caracter para no tener un tamaño fijo
+    while (registros[IP] != -1 && c != '\n' && (max_tam == -1 || i < max_tam)){
+        dir_fisica = traduce_y_setea_MAR(dir + i, 1, registros, tabla_segmentos);
+        if (dir_fisica != -1){
+            registros[MBR] = c;
+            MP[dir_fisica] = registros[MBR];
+            i++;
+            c = getchar();
+        } else {
+            printf("Error al escribir cadena: Segmentation Fault \n");
+            registros[IP] = -1;
+        }
+    }
+    if (registros [IP] != -1){
+        while (c != '\n'){
+            c = getchar(); //Limpio el buffer
+        }
+        dir_fisica = traduce_y_setea_MAR(dir + i, 1, registros, tabla_segmentos);
+        if (dir_fisica != -1){
+            registros[MBR] = '\0';
+            MP[dir_fisica] = registros[MBR];
+        } else {
+            printf("Error al escribir cadena: Segmentation Fault \n");
+            registros[IP] = -1;
+        }
+    }
+}
+
+void string_write(int registros[], int tabla_segmentos[], unsigned char MP[]){
+    char c;
+    int i = 0, dir = registros[EDX], dir_fisica;
+    dir_fisica = traduce_y_setea_MAR(dir, 1, registros, tabla_segmentos);
+    if (dir_fisica != -1){
+        registros[MBR] = MP[dir_fisica];
+        c = registros[MBR];
+    } else {
+        printf("Error al acceder a cadena: Segmentation Fault \n");
+        registros[IP] = -1;
+    }
+    while (registros[IP] != -1 && c != '\0'){
+        putchar(c);
+        i++;
+        dir_fisica = traduce_y_setea_MAR(dir + i, 1, registros, tabla_segmentos);
+        if (dir_fisica != -1){
+            registros[MBR] = MP[dir_fisica];
+            c = registros[MBR];
+        } else {
+            printf("Error al acceder a cadena: Segmentation Fault \n");
+            registros[IP] = -1;
+        }
+    }
+}
+
 void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     int llamada = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
@@ -699,21 +757,20 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int cant = registros[ECX] & 0x0000FFFF; // cantidad de celdas
     int tam = (registros[ECX] >> 16);       // tamaño de c/celda
     int dir_log = registros[EDX];           // puntero inicial
-    if (llamada == 1)
-    {
+    if(llamada == 0){ //Limpiar pantalla
+        printf("\033[H\033[J"); //Caracter ESC en otcal (27), seguido de [ para iniciar comandos, H mueve el cursor al inicio y J Borra todo lo que este despues del cursor
+    } else if (llamada == 1) {
         sys_read(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    }
-    else if (llamada == 2)
-    {
+    } else if (llamada == 2){
         sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    }
-    else if (llamada == 15)
-    {
+    } else if (llamada == 3){
+        string_read(registros, tabla_segmentos, MP);
+    } else if (llamada == 4){
+        string_write(registros, tabla_segmentos, MP);
+    } else if (llamada == 15){
         if (nombre_vmi[0] != '\0')
             paso_a_paso = 1; // Simula que el usuario puso paso a paso para que el proximo breakpoint se active siempre y ahi realmente decida el usuario
-    }
-    else
-    {
+    } else {
         printf("\nLlamada al sistema invalida");
         // registros[IP] = -1;
     }

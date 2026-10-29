@@ -12,6 +12,10 @@ int lectura(int, int, int[], int[], unsigned char[]);
 void escritura(int, int, int[], int[], unsigned char[], int);
 void actualizaCC(int[], int, int);
 
+//Funciones de strings
+void string_read(int registros[], int tabla_segmentos[], unsigned char MP[]);
+void string_write(int registros[], int tabla_segmentos[], unsigned char MP[]);
+
 //Funciones de debugger
 void ejecutar_breakpoint(int [], int [], unsigned char[]);
 void verificar_paso_a_paso(int [], int [], unsigned char []);
