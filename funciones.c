@@ -282,7 +282,7 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
         offset = offset >> 8;
         registros[LAR] = registros[registros[OP] & 0x01F] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = cant << 16;                                // reset MAR
-        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], cant);
         if (direcF != -1)
         {
             registros[MAR] |= direcF; // MAR parte baja
@@ -557,7 +557,7 @@ int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segm
     int direccion_fisica;
     registros[LAR] = dir_logica;
     registros[MAR] = tam << 16; // parte alta = cantidad de bytes
-    direccion_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    direccion_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (direccion_fisica != -1)
         registros[MAR] |= direccion_fisica; // parte baja
     return direccion_fisica;
@@ -922,7 +922,7 @@ void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
     registros[SP] -= 4; // Decrementa antes de escribir
     registros[LAR] = registros[SP];
     registros[MAR] = 4 << 16;
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (dir_fisica != -1)
     {
         registros[MAR] |= dir_fisica;
@@ -949,7 +949,7 @@ void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     }
     registros[LAR] = registros[SP];
     registros[MAR] = 4 << 16;
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (dir_fisica != -1)
     {
         registros[MAR] |= dir_fisica;
@@ -978,7 +978,7 @@ void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
         return;
     }
     registros[SP] -= 4;
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[SP]);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[SP], 4);
     if (dir_fisica != -1)
     {
         int32_t dir_retorno = registros[IP];
@@ -1005,7 +1005,7 @@ void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         return;
     }
     registros[LAR] = registros[SP];
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (dir_fisica != -1)
     {
         int32_t dir_retorno = 0;
