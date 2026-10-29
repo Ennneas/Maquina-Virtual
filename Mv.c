@@ -3,76 +3,81 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[])
+
+void disassembler_constantes(char MP[], int tabla_segmentos[], int registros[], int tamanioKS)
+{
+    if (registros[KS] != -1 && tamanioKS > 0)
+    {
+
+        int base = Conversor_Memoria_Fisica(tabla_segmentos, registros[KS]);
+        int i = 0;
+
+        while (i < tamanioKS)
+        {
+            int ini = i;
+            char hex[32] = "";
+            char byteStr[4];
+
+            // avanzar hasta el '\0' (o el fin del segmento)
+            while (i < tamanioKS && MP[base + i] != '\0')
+                i++;
+            if (i < tamanioKS)
+                i++; // incluir el '\0'
+
+            int len = i - ini;
+            int mostrar = (len > 7) ? 6 : len;
+
+            // columna hexadecimal
+            for (int k = 0; k < mostrar; k++)
+            {
+                sprintf(byteStr, "%02X ", (unsigned char)MP[base + ini + k]);
+                strcat(hex, byteStr);
+            }
+            if (len > 7)
+                strcat(hex, "..");
+
+            // direccion + hex
+            printf("\n [%04X] %s | \"", base + ini, hex);
+
+            // columna de texto
+            for (int k = 0; k < len; k++)
+            {
+                unsigned char c = (unsigned char)MP[base + ini + k];
+                if (c == '\0')
+                    break;
+                putchar(isprint(c) ? c : '.');
+            }
+            putchar('"');
+        }
+    }
+}
+
+void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[], int entrypoint)
 {
     int direfis, registro, inmediato, longop;
-    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "";
+    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca, suf, pref;
+    static const char *NOMBRES[32] = {
+        "IP ", "OPC", "OP1", "OP2", "LAR", "MAR", "MBR", "SP ", "BP ", "???",
+        "EAX", "EBX", "ECX", "EDX", "EEX", "EFX", "AC ", "CC ",
+        "???", "???", "???", "???", "???", "???", "???", "???",
+        "CS ", "DS ", "ES ", "SS ", "KS ", "PS "};
 
     direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
 
     if (top1 == 3)
     {
-        registro = registros[OP1] & 0b00000000000000000000000000011111;
-        switch (registro)
-        {
-        case IP:
-            strcpy(OP_A, "[IP +");
-            break;
-        case OPC:
-            strcpy(OP_A, "[OPC+");
-            break;
-        case OP1:
-            strcpy(OP_A, "[OP1+");
-            break;
-        case OP2:
-            strcpy(OP_A, "[OP2+");
-            break;
-        case LAR:
-            strcpy(OP_A, "[LAR+");
-            break;
-        case MAR:
-            strcpy(OP_A, "[MAR+");
-            break;
-        case MBR:
-            strcpy(OP_A, "[MBR+");
-            break;
-        case EAX:
-            strcpy(OP_A, "[EAX+");
-            break;
-        case EBX:
-            strcpy(OP_A, "[EBX+");
-            break;
-        case ECX:
-            strcpy(OP_A, "[ECX+");
-            break;
-        case EDX:
-            strcpy(OP_A, "[EDX+");
-            break;
-        case EEX:
-            strcpy(OP_A, "[EEX+");
-            break;
-        case EFX:
-            strcpy(OP_A, "[EFX+");
-            break;
-        case AC:
-            strcpy(OP_A, "[AC +");
-            break;
-        case CC:
-            strcpy(OP_A, "[CC +");
-            break;
-        case CS:
-            strcpy(OP_A, "[CS +");
-            break;
-        case DS:
-            strcpy(OP_A, "[DS +");
-            break;
-        }
-        inmediato = (registros[OP1] & 0x00FFFF00) >> 8;
-        snprintf(OP_A + 5, sizeof(OP_A) - 5, "%d", inmediato);
+        registro = registros[OP1] & 0x1F;
+        mod = (registros[OP1] >> 5) & 0x7;
+        inmediato = (short)((registros[OP1] >> 8) & 0xFFFF);
 
-        int longop = strlen(OP_A);
-        OP_A[longop] = ']';
-        OP_A[longop + 1] = '\0';
+        if (mod == 1)
+            pref = 'b';
+        else if (mod == 2)
+            pref = 'w';
+        else
+            pref = 'l';
+
+        snprintf(OP_A, sizeof(OP_A), "%c[%s%+d]", pref, NOMBRES[registro], inmediato);
     }
     else
     {
@@ -83,126 +88,38 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         }
         else if (top1 == 1)
         {
-            registro = registros[OP1] & 0b00000000000000000000000000011111;
-            switch (registro)
+            registro = registros[OP1] & 0x1F;
+            sector = (registros[OP1] >> 5) & 0x3;
+
+            if (registro >= EAX && registro <= EFX && sector != 0)
             {
-            case IP:
-                strcpy(OP_A, "IP ");
-                break;
-            case OPC:
-                strcpy(OP_A, "OPC");
-                break;
-            case OP1:
-                strcpy(OP_A, "OP1");
-                break;
-            case OP2:
-                strcpy(OP_A, "OP2");
-                break;
-            case LAR:
-                strcpy(OP_A, "LAR");
-                break;
-            case MAR:
-                strcpy(OP_A, "MAR");
-                break;
-            case MBR:
-                strcpy(OP_A, "MBR");
-                break;
-            case EAX:
-                strcpy(OP_A, "EAX");
-                break;
-            case EBX:
-                strcpy(OP_A, "EBX");
-                break;
-            case ECX:
-                strcpy(OP_A, "ECX");
-                break;
-            case EDX:
-                strcpy(OP_A, "EDX");
-                break;
-            case EEX:
-                strcpy(OP_A, "EEX");
-                break;
-            case EFX:
-                strcpy(OP_A, "EFX");
-                break;
-            case AC:
-                strcpy(OP_A, "AC ");
-                break;
-            case CC:
-                strcpy(OP_A, "CC ");
-                break;
-            case CS:
-                strcpy(OP_A, "CS ");
-                break;
-            case DS:
-                strcpy(OP_A, "DS ");
-                break;
+                char letra = 'A' + (registro - EAX); // A,B,C,D,E,F
+                if (sector == 1)
+                    suf = 'L';
+                else if (sector == 2)
+                    suf = 'H';
+                else
+                    suf = 'X';
+                snprintf(OP_A, sizeof(OP_A), "%c%c", letra, suf);
             }
+            else
+                strcpy(OP_A, NOMBRES[registro]);
         }
     }
     if (top2 == 3)
     {
-        registro = registros[OP2] & 0b00000000000000000000000000011111;
-        switch (registro)
-        {
-        case IP:
-            strcpy(OP_B, "[IP +");
-            break;
-        case OPC:
-            strcpy(OP_B, "[OPC+");
-            break;
-        case OP1:
-            strcpy(OP_B, "[OP1+");
-            break;
-        case OP2:
-            strcpy(OP_B, "[OP2+");
-            break;
-        case LAR:
-            strcpy(OP_B, "[LAR+");
-            break;
-        case MAR:
-            strcpy(OP_B, "[MAR+");
-            break;
-        case MBR:
-            strcpy(OP_B, "[MBR+");
-            break;
-        case EAX:
-            strcpy(OP_B, "[EAX+");
-            break;
-        case EBX:
-            strcpy(OP_B, "[EBX+");
-            break;
-        case ECX:
-            strcpy(OP_B, "[ECX+");
-            break;
-        case EDX:
-            strcpy(OP_B, "[EDX+");
-            break;
-        case EEX:
-            strcpy(OP_B, "[EEX+");
-            break;
-        case EFX:
-            strcpy(OP_B, "[EFX+");
-            break;
-        case AC:
-            strcpy(OP_B, "[AC +");
-            break;
-        case CC:
-            strcpy(OP_B, "[CC +");
-            break;
-        case CS:
-            strcpy(OP_B, "[CS +");
-            break;
-        case DS:
-            strcpy(OP_B, "[DS +");
-            break;
-        }
-        inmediato = (registros[OP2] & 0x00FFFF00) >> 8;
-        snprintf(OP_B + 5, sizeof(OP_B) - 5, "%d", inmediato);
+        registro = registros[OP2] & 0x1F;
+        mod = (registros[OP2] >> 5) & 0x7;
+        inmediato = (short)((registros[OP2] >> 8) & 0xFFFF);
 
-        int longop = strlen(OP_B);
-        OP_B[longop] = ']';
-        OP_B[longop + 1] = '\0';
+        if (mod == 1)
+            pref = 'b';
+        else if (mod == 2)
+            pref = 'w';
+        else
+            pref = 'l';
+
+        snprintf(OP_B, sizeof(OP_B), "%c[%s%+d]", pref, NOMBRES[registro], inmediato);
     }
     else
     {
@@ -213,61 +130,22 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         }
         else if (top2 == 1)
         {
-            registro = registros[OP2] & 0b00000000000000000000000000011111;
-            switch (registro)
+            registro = registros[OP2] & 0x1F;
+            sector = (registros[OP2] >> 5) & 0x3;
+
+            if (registro >= EAX && registro <= EFX && sector != 0)
             {
-            case IP:
-                strcpy(OP_B, "IP ");
-                break;
-            case OPC:
-                strcpy(OP_B, "OPC");
-                break;
-            case OP1:
-                strcpy(OP_B, "OP1");
-                break;
-            case OP2:
-                strcpy(OP_B, "OP2");
-                break;
-            case LAR:
-                strcpy(OP_B, "LAR");
-                break;
-            case MAR:
-                strcpy(OP_B, "MAR");
-                break;
-            case MBR:
-                strcpy(OP_B, "MBR");
-                break;
-            case EAX:
-                strcpy(OP_B, "EAX");
-                break;
-            case EBX:
-                strcpy(OP_B, "EBX");
-                break;
-            case ECX:
-                strcpy(OP_B, "ECX");
-                break;
-            case EDX:
-                strcpy(OP_B, "EDX");
-                break;
-            case EEX:
-                strcpy(OP_B, "EEX");
-                break;
-            case EFX:
-                strcpy(OP_B, "EFX");
-                break;
-            case AC:
-                strcpy(OP_B, "AC ");
-                break;
-            case CC:
-                strcpy(OP_B, "CC ");
-                break;
-            case CS:
-                strcpy(OP_B, "CS ");
-                break;
-            case DS:
-                strcpy(OP_B, "DS ");
-                break;
+                char letra = 'A' + (registro - EAX); // A,B,C,D,E,F
+                if (sector == 1)
+                    suf = 'L';
+                else if (sector == 2)
+                    suf = 'H';
+                else
+                    suf = 'X';
+                snprintf(OP_B, sizeof(OP_B), "%c%c", letra, suf);
             }
+            else
+                strcpy(OP_B, NOMBRES[registro]);
         }
     }
     int longitud = top1 + top2 + 1;
@@ -277,10 +155,13 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         sprintf(byteStr, "%02X ", (unsigned char)MP[direfis + b]);
         strcat(Cad_Instru, byteStr);
     }
-    if (strcmp(MNEM, "STOP") != 0)
-        printf("\n[%04X] %s  | %s  %s  %s", direfis, Cad_Instru, MNEM, OP_A, OP_B);
+    if ((registros[IP] & 0xFFFF) == entrypoint)
+        marca = '>'
+
+            if (strcmp(MNEM, "STOP") != 0)
+                printf("\n %c [%04X] %s  | %s  %s  %s", marca, direfis, Cad_Instru, MNEM, OP_A, OP_B);
     else
-        printf("\n[%04X] %s  | %s", direfis, Cad_Instru, MNEM);
+        printf("\n %c [%04X] %s  | %s", marca, direfis, Cad_Instru, MNEM);
 }
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler)
 {
@@ -298,6 +179,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
             carga_operandos(top1, top2, registros, MP, registros[IP] + 1);
             if (flag_dissasembler == 'd')
             {
+
                 strcpy(MNEM, VMnemonicos[indice_Mnemonico].mnemonico);
                 disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
             }
