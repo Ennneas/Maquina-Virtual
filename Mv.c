@@ -10,7 +10,7 @@ void disassembler_constantes(char MP[], int tabla_segmentos[], int registros[], 
     if (registros[KS] != -1 && tamanioKS > 0)
     {
 
-        int base = Conversor_Memoria_Fisica(tabla_segmentos, registros[KS]);
+        int base = Conversor_Memoria_Fisica(tabla_segmentos, registros[KS], 4);
         int i = 0;
 
         while (i < tamanioKS)
@@ -63,7 +63,7 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         "???", "???", "???", "???", "???", "???", "???", "???",
         "CS ", "DS ", "ES ", "SS ", "KS ", "PS "};
 
-    direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
+    direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 4);
 
     if (top1 == 3)
     {
@@ -167,7 +167,7 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, int entrypoint)
 {
     char primer_byte, MNEM[5];
-    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
+    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 4);
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
@@ -370,11 +370,11 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 }
 
                 // Paso a memoria
-                baseCS = Conversor_Memoria_Fisica(tabla_segmentos, registros[CS]);
+                baseCS = Conversor_Memoria_Fisica(tabla_segmentos, registros[CS], 4);
                 fread(&MP[baseCS], sizeof(unsigned char), tamanioCS, Arch);
                 if (tamanioKS > 0)
                 {
-                    baseKS = Conversor_Memoria_Fisica(tabla_segmentos, registros[KS]);
+                    baseKS = Conversor_Memoria_Fisica(tabla_segmentos, registros[KS], 4);
                     fread(&MP[baseKS], sizeof(unsigned char), tamanioKS, Arch);
                 }
                 if (flag_d == 'd')
