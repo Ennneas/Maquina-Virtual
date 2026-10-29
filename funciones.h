@@ -48,4 +48,9 @@ void JNP(int, int, int[], unsigned char[], int[]);
 void JNN(int, int, int[], unsigned char[], int[]);
 void JNZ(int, int, int[], unsigned char[], int[]);
 void NOT(int, int, int[], unsigned char[], int[]);
+void PUSH(int, int, int[], unsigned char[], int[]);
+void POP(int, int, int[], unsigned char[], int[]);
+void CALL(int, int, int[], unsigned char[], int[]);
+void RET(int, int, int[], unsigned char[], int[]);
+
 #endif

@@ -236,7 +236,7 @@ void inicializa_pila(Tmnemonicos vmnemonicos[], int registros[], int tabla_segme
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP)
 {
     int tamanios[6] = {calculartamanioPS(parametros, n, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
-    // PS=31, KS=30, CS=26, DS=27, ES=28, SS=29
+    // PS=31, KS=30, CS=26, DS=27, ES=2 8, SS=29
     int reg_seg[6] = {31, 30, 26, 27, 28, 29};
     int i;
 
