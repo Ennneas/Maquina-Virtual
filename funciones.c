@@ -37,9 +37,9 @@ void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char M
     Dire_logica += offset;
 
     registros[LAR] = Dire_logica;
-    registros[MAR] = cant << 16; // MAR parte alta
 
     cant = (registros[OP] >> 5) & 0x7;
+    registros[MAR] = cant << 16; // MAR parte alta
     if (cant != 1 && cant != 2)
         cant = 4;
     Direccion_Fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], cant);
@@ -692,58 +692,76 @@ void verificar_paso_a_paso(int registros[], int tabla_segmentos[], unsigned char
         ejecutar_breakpoint(registros, tabla_segmentos, MP);
 }
 
-void string_read(int registros[], int tabla_segmentos[], unsigned char MP[]){
+void string_read(int registros[], int tabla_segmentos[], unsigned char MP[])
+{
     char c;
     int i = 0, max_tam, dir, dir_fisica;
-    max_tam = registros[ECX]; 
+    max_tam = registros[ECX];
     dir = registros[EDX];
     c = getchar(); // Leo caracter a caracter para no tener un tamaño fijo
-    while (registros[IP] != -1 && c != '\n' && (max_tam == -1 || i < max_tam)){
+    while (registros[IP] != -1 && c != '\n' && (max_tam == -1 || i < max_tam))
+    {
         dir_fisica = traduce_y_setea_MAR(dir + i, 1, registros, tabla_segmentos);
-        if (dir_fisica != -1){
+        if (dir_fisica != -1)
+        {
             registros[MBR] = c;
             MP[dir_fisica] = registros[MBR];
             i++;
             c = getchar();
-        } else {
+        }
+        else
+        {
             printf("Error al escribir cadena: Segmentation Fault \n");
             registros[IP] = -1;
         }
     }
-    if (registros [IP] != -1){
-        while (c != '\n'){
-            c = getchar(); //Limpio el buffer
+    if (registros[IP] != -1)
+    {
+        while (c != '\n')
+        {
+            c = getchar(); // Limpio el buffer
         }
         dir_fisica = traduce_y_setea_MAR(dir + i, 1, registros, tabla_segmentos);
-        if (dir_fisica != -1){
+        if (dir_fisica != -1)
+        {
             registros[MBR] = '\0';
             MP[dir_fisica] = registros[MBR];
-        } else {
+        }
+        else
+        {
             printf("Error al escribir cadena: Segmentation Fault \n");
             registros[IP] = -1;
         }
     }
 }
 
-void string_write(int registros[], int tabla_segmentos[], unsigned char MP[]){
+void string_write(int registros[], int tabla_segmentos[], unsigned char MP[])
+{
     char c;
     int i = 0, dir = registros[EDX], dir_fisica;
     dir_fisica = traduce_y_setea_MAR(dir, 1, registros, tabla_segmentos);
-    if (dir_fisica != -1){
+    if (dir_fisica != -1)
+    {
         registros[MBR] = MP[dir_fisica];
         c = registros[MBR];
-    } else {
+    }
+    else
+    {
         printf("Error al acceder a cadena: Segmentation Fault \n");
         registros[IP] = -1;
     }
-    while (registros[IP] != -1 && c != '\0'){
+    while (registros[IP] != -1 && c != '\0')
+    {
         putchar(c);
         i++;
         dir_fisica = traduce_y_setea_MAR(dir + i, 1, registros, tabla_segmentos);
-        if (dir_fisica != -1){
+        if (dir_fisica != -1)
+        {
             registros[MBR] = MP[dir_fisica];
             c = registros[MBR];
-        } else {
+        }
+        else
+        {
             printf("Error al acceder a cadena: Segmentation Fault \n");
             registros[IP] = -1;
         }
@@ -757,20 +775,33 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int cant = registros[ECX] & 0x0000FFFF; // cantidad de celdas
     int tam = (registros[ECX] >> 16);       // tamaño de c/celda
     int dir_log = registros[EDX];           // puntero inicial
-    if(llamada == 0){ //Limpiar pantalla
-        printf("\033[H\033[J"); //Caracter ESC en otcal (27), seguido de [ para iniciar comandos, H mueve el cursor al inicio y J Borra todo lo que este despues del cursor
-    } else if (llamada == 1) {
+    if (llamada == 0)
+    {                           // Limpiar pantalla
+        printf("\033[H\033[J"); // Caracter ESC en otcal (27), seguido de [ para iniciar comandos, H mueve el cursor al inicio y J Borra todo lo que este despues del cursor
+    }
+    else if (llamada == 1)
+    {
         sys_read(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    } else if (llamada == 2){
+    }
+    else if (llamada == 2)
+    {
         sys_write(dir_log, cant, tam, modo, registros, tabla_segmentos, MP);
-    } else if (llamada == 3){
+    }
+    else if (llamada == 3)
+    {
         string_read(registros, tabla_segmentos, MP);
-    } else if (llamada == 4){
+    }
+    else if (llamada == 4)
+    {
         string_write(registros, tabla_segmentos, MP);
-    } else if (llamada == 15){
+    }
+    else if (llamada == 15)
+    {
         if (nombre_vmi[0] != '\0')
             paso_a_paso = 1; // Simula que el usuario puso paso a paso para que el proximo breakpoint se active siempre y ahi realmente decida el usuario
-    } else {
+    }
+    else
+    {
         printf("\nLlamada al sistema invalida");
         // registros[IP] = -1;
     }
@@ -879,7 +910,7 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     actualiza_CC(registros, (long long int)valor, (unsigned long long int)(unsigned int)valor, valor);
 }
 void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
-{    
+{
     int32_t valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     int offset_sp = registros[SP] & 0x0000FFFF;
     if (offset_sp < 4) // Stack Overflow (llegó al fondo del segmento SS)
@@ -904,7 +935,6 @@ void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
         printf("\nSEGMENTATION FAULT EN PUSH");
         registros[IP] = -1;
     }
-
 }
 void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
@@ -935,7 +965,6 @@ void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         printf("\nSEGMENTATION FAULT EN POP");
         registros[IP] = -1;
     }
-    
 }
 void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
@@ -991,5 +1020,4 @@ void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         printf("\nSEGMENTATION FAULT EN RET");
         registros[IP] = -1;
     }
-    
 }

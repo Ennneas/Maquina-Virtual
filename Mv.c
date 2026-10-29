@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 void disassembler_constantes(char MP[], int tabla_segmentos[], int registros[], int tamanioKS)
 {
@@ -54,8 +55,8 @@ void disassembler_constantes(char MP[], int tabla_segmentos[], int registros[], 
 
 void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[], int entrypoint)
 {
-    int direfis, registro, inmediato, longop;
-    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca, suf, pref;
+    int direfis, registro, inmediato, longop, mod, sector;
+    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca = " ", suf, pref;
     static const char *NOMBRES[32] = {
         "IP ", "OPC", "OP1", "OP2", "LAR", "MAR", "MBR", "SP ", "BP ", "???",
         "EAX", "EBX", "ECX", "EDX", "EEX", "EFX", "AC ", "CC ",
@@ -156,14 +157,14 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         strcat(Cad_Instru, byteStr);
     }
     if ((registros[IP] & 0xFFFF) == entrypoint)
-        marca = '>'
+        marca = '>';
 
-            if (strcmp(MNEM, "STOP") != 0)
-                printf("\n %c [%04X] %s  | %s  %s  %s", marca, direfis, Cad_Instru, MNEM, OP_A, OP_B);
+    if (strcmp(MNEM, "STOP") != 0)
+        printf("\n %c [%04X] %s  | %s  %s  %s", marca, direfis, Cad_Instru, MNEM, OP_A, OP_B);
     else
         printf("\n %c [%04X] %s  | %s", marca, direfis, Cad_Instru, MNEM);
 }
-void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler)
+void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, int entrypoint)
 {
     char primer_byte, MNEM[5];
     int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP]);
@@ -181,7 +182,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
             {
 
                 strcpy(MNEM, VMnemonicos[indice_Mnemonico].mnemonico);
-                disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
+                disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP, entrypoint);
             }
             registros[IP] += top1 + top2 + 1;
             VMnemonicos[indice_Mnemonico].ejecuta(top1, top2, registros, MP, tabla_segmentos); // ejecuta la operacion correspondiente al codigo de operacion leido
@@ -191,7 +192,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
             if (flag_dissasembler == 'd')
             {
                 strcpy(MNEM, "STOP");
-                disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP);
+                disassembler(top1, top2, registros, tabla_segmentos, MNEM, MP, entrypoint);
             }
             registros[IP] = -1;
         }
@@ -294,90 +295,109 @@ void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int can
     }
 }
 
-void leer_codigo(int registros[], int tabla_segmentos[],  unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[])
+void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint)
 {
     short int i = 0, j = 0, tamanioCS = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0, campos[6], baseCS, baseKS;
     unsigned char x, identificador[6], version, tam[2];
     FILE *Arch;
     Arch = fopen(nombreArch, "rb");
-    if (Arch != NULL){
+    if (Arch != NULL)
+    {
         fread(identificador, sizeof(char), 5, Arch);
         identificador[5] = '\0';
 
-        if (strcmp(identificador, "VMX26") == 0){
+        if (strcmp(identificador, "VMX26") == 0)
+        {
             fread(&version, sizeof(char), 1, Arch);
 
-            if (version == 1){
+            if (version == 1)
+            {
                 fread(tam, sizeof(unsigned char), 2, Arch);
                 tamanioCS = (tam[0] << 8) | tam[1];
 
-                if (tamanioCS <= MAX_MEMORIA){
-                    //Inicalizo la tabla de segmentos
+                if (tamanioCS <= MAX_MEMORIA)
+                {
+                    // Inicalizo la tabla de segmentos
                     tamanioDS = MAX_MEMORIA - tamanioCS;
                     tabla_segmentos[0] = 0x00000000 | tamanioCS;
                     tabla_segmentos[1] = tamanioCS << 16 | tamanioDS;
-                    for (i = 2; i < 8; i++){
+                    for (i = 2; i < 8; i++)
+                    {
                         tabla_segmentos[i] = 0xFFFFFFFF;
                     }
 
-                    //Configuro los registros utilizados
+                    // Configuro los registros utilizados
                     registros[CS] = 0x00000000;
                     registros[DS] = 0x00010000;
 
-                    //Cargo la memoria con el codigo
+                    // Cargo la memoria con el codigo
                     fread(MP, sizeof(unsigned char), tamanioCS, Arch);
 
-                    //Indico donde inicia el programa
+                    // Indico donde inicia el programa
                     registros[IP] = registros[CS];
-
-                } else {
+                }
+                else
+                {
                     printf("Memoria insuficiente");
                     registros[IP] = -1;
                 }
-
-            } else if (version == 2){
-                //Leo todos los campos
-                for(i = 0; i < 6; i++){
+            }
+            else if (version == 2)
+            {
+                // Leo todos los campos
+                for (i = 0; i < 6; i++)
+                {
                     fread(tam, sizeof(unsigned char), 2, Arch);
                     campos[i] = (tam[0] << 8) | tam[1];
                 }
 
-                //Asigno los valores
+                // Asigno los valores
                 tamanioCS = campos[0];
                 tamanioDS = campos[1];
                 tamanioES = campos[2];
                 tamanioSS = campos[3];
                 tamanioKS = campos[4];
-                offsetEP  = campos[5];
+                offsetEP = campos[5];
+                *entrypoint = offsetEP;
 
-                //Inicializo la tabla de segmentos
-                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p,  offsetEP);
+                // Inicializo la tabla de segmentos
+                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP);
 
-                //Cargo los parametros si es que hay
-                if (flag_p == 'p') {
+                // Cargo los parametros si es que hay
+                if (flag_p == 'p')
+                {
                     cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p);
                 }
 
-                //Paso a memoria 
+                // Paso a memoria
                 baseCS = Conversor_Memoria_Fisica(tabla_segmentos, registros[CS]);
                 fread(&MP[baseCS], sizeof(unsigned char), tamanioCS, Arch);
-                if (tamanioKS > 0){
+                if (tamanioKS > 0)
+                {
                     baseKS = Conversor_Memoria_Fisica(tabla_segmentos, registros[KS]);
                     fread(&MP[baseKS], sizeof(unsigned char), tamanioKS, Arch);
                 }
-                
-                //Inicializo la pila
+                if (flag_d == 'd')
+                    disassembler_constantes(MP, tabla_segmentos, registros, tamanioKS);
+
+                // Inicializo la pila
                 inicializa_pila(VMnemonicos, registros, tabla_segmentos, MP, cantparam, parametros, offsetEP); // subrutina principal
-            } else {
+            }
+            else
+            {
                 printf("La version del archivo vmx no es compatible");
                 registros[IP] = -1;
             }
-        } else {
+        }
+        else
+        {
             printf("El archivo vmx no tiene la cabecera correcta");
             registros[IP] = -1;
         }
         fclose(Arch);
-    } else {
+    }
+    else
+    {
         printf("No se pudo leer el archivo vmx");
         registros[IP] = -1;
     }
@@ -426,21 +446,26 @@ int main(int argc, char *argv[])
 
     cargar_mnemonicos(VMnemonicos);
 
-    if (nombre_vmx[0] == '\0'  && nombre_vmi[0] == '\0')
+    if (nombre_vmx[0] == '\0' && nombre_vmi[0] == '\0')
     {
         printf("No se cargo el archivo .vmx ni .vmi\n");
         return 1;
-    } else if (nombre_vmx[0] != '\0'){
-        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos);
-    } else {
+    }
+    else if (nombre_vmx[0] != '\0')
+    {
+        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint);
+    }
+    else
+    {
         cargar_imagen(&memoria_kib, nombre_vmi, registros, tabla_segmentos, MP);
     }
+    if (flag_d == 'd')
 
-    // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1)
-    {
-        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d);
-        verificar_paso_a_paso(registros, tabla_segmentos, MP);
-    }
+        // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
+        while (registros[IP] != -1)
+        {
+            ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d, entrypoint);
+            verificar_paso_a_paso(registros, tabla_segmentos, MP);
+        }
     return 0;
 }

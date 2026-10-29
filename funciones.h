@@ -2,25 +2,25 @@
 #define funciones_h
 #include "TIPOS.h"
 
-void configurar_debug(char [], int);
+void configurar_debug(char[], int);
 void lee_memoria(int, int[], int[], unsigned char[]);
 int valida_instruccion(int, Tmnemonicos[], int *);
 void carga_operandos(int, int, int[], unsigned char[], int);
-int Conversor_Memoria_Fisica(int[], int);
+int Conversor_Memoria_Fisica(int[], int, int);
 void cargar_mnemonicos(Tmnemonicos[]);
 int lectura(int, int, int[], int[], unsigned char[]);
 void escritura(int, int, int[], int[], unsigned char[], int);
-void actualizaCC(int[], int, int);
+void actualiza_CC(int[], int, int);
 
-//Funciones de strings
+// Funciones de strings
 void string_read(int registros[], int tabla_segmentos[], unsigned char MP[]);
 void string_write(int registros[], int tabla_segmentos[], unsigned char MP[]);
 
-//Funciones de debugger
-void ejecutar_breakpoint(int [], int [], unsigned char[]);
-void verificar_paso_a_paso(int [], int [], unsigned char []);
+// Funciones de debugger
+void ejecutar_breakpoint(int[], int[], unsigned char[]);
+void verificar_paso_a_paso(int[], int[], unsigned char[]);
 
-//Funciones de Mnemonicos
+// Funciones de Mnemonicos
 void MOV(int, int, int[], unsigned char[], int[]);
 void ADD(int, int, int[], unsigned char[], int[]);
 void SUB(int, int, int[], unsigned char[], int[]);
