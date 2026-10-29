@@ -557,7 +557,7 @@ int traduce_y_setea_MAR(int dir_logica, int tam, int registros[], int tabla_segm
     int direccion_fisica;
     registros[LAR] = dir_logica;
     registros[MAR] = tam << 16; // parte alta = cantidad de bytes
-    direccion_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR]);
+    direccion_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], tam);
     if (direccion_fisica != -1)
         registros[MAR] |= direccion_fisica; // parte baja
     return direccion_fisica;
@@ -670,6 +670,7 @@ void ejecutar_breakpoint(int registros[], int tabla_segmentos[], unsigned char M
     if (nombre_vmi[0] != '\0')
     {
         guardar_imagen(tamanio_MP, nombre_vmi, registros, tabla_segmentos, MP);
+        printf("\n[DEBUG] Enter: paso a paso | g: continuar | q: salir > ");
         do
         {
             // Uso fgets en lugar de scanf para leer el enter y para mas seguridad
@@ -681,7 +682,7 @@ void ejecutar_breakpoint(int registros[], int tabla_segmentos[], unsigned char M
             else if (indicador_debug[0] == 'q')
                 registros[IP] = -1;
             else
-                printf("Comando invalido, por favor intente de vuelta \n");
+                printf("Comando invalido (Enter: paso a paso | g: continuar | q: salir) > ");
         } while (indicador_debug[0] != '\n' && indicador_debug[0] != 'g' && indicador_debug[0] != 'q');
     }
 }

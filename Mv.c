@@ -234,9 +234,9 @@ void inicializa_pila(Tmnemonicos vmnemonicos[], int registros[], int tabla_segme
     registros[OP2] = entrypoint;
     vmemonicos[29].ejecuta(0, 1, registros, MP, tabla_segmentos); // llama a la subrutina principal
 }
-void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP)
+void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total)
 {
-    int tamanios[6] = {calculartamanioPS(parametros, n, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
+    int tamanios[6] = {calculartamanioPS(parametros, cantparam, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
     // PS=31, KS=30, CS=26, DS=27, ES=2 8, SS=29
     int reg_seg[6] = {31, 30, 26, 27, 28, 29};
     int i;
@@ -260,9 +260,6 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     if (base > memoria_total)
     {
         printf("Memoria insuficiente");
-    }
-    else
-    {
         registros[IP] = -1;
     }
 }
@@ -295,7 +292,7 @@ void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int can
     }
 }
 
-void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint)
+void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint, int memoria_total)
 {
     short int i = 0, j = 0, tamanioCS = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0, campos[6], baseCS, baseKS;
     unsigned char x, identificador[6], version, tam[2];
@@ -361,7 +358,7 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 *entrypoint = offsetEP;
 
                 // Inicializo la tabla de segmentos
-                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP);
+                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP, memoria_total);
 
                 // Cargo los parametros si es que hay
                 if (flag_p == 'p')
@@ -453,13 +450,14 @@ int main(int argc, char *argv[])
     }
     else if (nombre_vmx[0] != '\0')
     {
-        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint);
+        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint, memoria_kib * 1024);
     }
     else
     {
         cargar_imagen(&memoria_kib, nombre_vmi, registros, tabla_segmentos, MP);
     }
-    if (flag_d == 'd')
+
+    configurar_debug(nombre_vmi, memoria_kib);
 
         // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
         while (registros[IP] != -1)
