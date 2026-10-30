@@ -218,21 +218,21 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
     }
     return tam;
 }
-void inicializa_pila(Tmnemonicos vmnemonicos[], int registros[], int tabla_segmentos[], unsigned char MP[], int argc, char *parametros[30], int16_t entrypoint)
+void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[], int argc,int vpunteros_parametros[], int16_t entrypoint)
 {
     int i = 0, offset_SP;
-    offset_SP = (tabla_segmentos[registros[SS] >> 16]);
+    offset_SP = (tabla_segmentos[registros[SS] & 0x0FFFF]);
     registros[BP] = registros[SP] = registros[SS] + offset_SP; // inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     // subrutina principal
+    // argv
+    registros[OP2]= 0x0 & offsets[0];//direccion logica del primer parametro
+    PUSH(0, 3, registros, MP, tabla_segmentos); // pushea argc
     // argc
     registros[OP2] = argc;
-    vmemonicos[27].ejecuta(0, 3, registros, MP, tabla_segmentos); // pushea argc
-                                                                  // argv
-    registros[OP2] = parametros;
-    vmemonicos[27].ejecuta(0, 3, registros, MP, tabla_segmentos); // pushea *argv
+    PUSH(0, 3, registros, MP, tabla_segmentos); // pushea *argv
     // IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
     registros[OP2] = entrypoint;
-    vmemonicos[29].ejecuta(0, 1, registros, MP, tabla_segmentos); // llama a la subrutina principal
+    CALL(0, 1, registros, MP, tabla_segmentos); // llama a la subrutina principal
 }
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total)
 {
@@ -264,10 +264,9 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     }
 }
 
-void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param)
+void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param,int offsets[];)
 {
     int i, j, posmem = 0;
-    int offsets[cantparam + 1];
 
     offsets[0] = 0;
     for (i = 0; nombreArch[i] != '\0'; i++)
@@ -292,7 +291,7 @@ void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int can
     }
 }
 
-void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint, int memoria_total)
+void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint, int memoria_total,int offsets[])
 {
     short int i = 0, j = 0, tamanioCS = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0, campos[6], baseCS, baseKS;
     unsigned char x, identificador[6], version, tam[2];
@@ -356,16 +355,14 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 tamanioKS = campos[4];
                 offsetEP = campos[5];
                 *entrypoint = offsetEP;
-
                 // Inicializo la tabla de segmentos
                 inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP, memoria_total);
 
                 // Cargo los parametros si es que hay
                 if (flag_p == 'p')
                 {
-                    cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p);
+                    cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p,offsets);
                 }
-
                 // Paso a memoria
                 baseCS = Conversor_Memoria_Fisica(tabla_segmentos, registros[CS], 4);
                 fread(&MP[baseCS], sizeof(unsigned char), tamanioCS, Arch);
@@ -378,7 +375,7 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                     disassembler_constantes(MP, tabla_segmentos, registros, tamanioKS);
 
                 // Inicializo la pila
-                inicializa_pila(VMnemonicos, registros, tabla_segmentos, MP, cantparam, parametros, offsetEP); // subrutina principal
+                inicializa_pila(registros, tabla_segmentos, MP, cantparam, offsets, offsetEP); // subrutina principal
             }
             else
             {
@@ -405,8 +402,7 @@ int main(int argc, char *argv[])
     char nombre_vmx[256] = "\0", flag_d = '\0', flag_p = '\0', nombre_vmi[256] = "\0";
     int16_t entrypoint;
     int tabla_segmentos[TAM_TABLA];
-    int registros[CANT_REGS];
-    unsigned char MP[MAX_MEMORIA];
+    int registros[CANT_REGS],offsets[50];
     Tmnemonicos VMnemonicos[CANT_MNE];
     int cantparam = 0, i, memoria_kib = 16;
     char *parametros[30];
@@ -440,7 +436,7 @@ int main(int argc, char *argv[])
             strcpy(nombre_vmi, argv[i]);
         }
     }
-
+    unsigned char MP[memoria_kib*1024];//rompo con la programacion estructurada 
     cargar_mnemonicos(VMnemonicos);
 
     if (nombre_vmx[0] == '\0' && nombre_vmi[0] == '\0')
@@ -450,7 +446,7 @@ int main(int argc, char *argv[])
     }
     else if (nombre_vmx[0] != '\0')
     {
-        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint, memoria_kib * 1024);
+        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint, memoria_kib * 1024,offsets);
     }
     else
     {
