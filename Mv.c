@@ -225,8 +225,8 @@ void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[],
     registros[BP] = registros[SP] = registros[SS] + offset_SP; // inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     // subrutina principal
     // argv
-    registros[OP2] = 0x0 & offsets[0];          // direccion logica del primer parametro
-    PUSH(0, 3, registros, MP, tabla_segmentos); // pushea argc
+    registros[OP2] = 0x0 & vpunteros_parametros[0]; // direccion logica del primer parametro
+    PUSH(0, 3, registros, MP, tabla_segmentos);     // pushea argc
     // argc
     registros[OP2] = argc;
     PUSH(0, 3, registros, MP, tabla_segmentos); // pushea *argv
