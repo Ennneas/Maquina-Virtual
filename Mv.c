@@ -218,14 +218,14 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
     }
     return tam;
 }
-void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[], int argc,int vpunteros_parametros[], int16_t entrypoint)
+void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[], int argc, int vpunteros_parametros[], int16_t entrypoint)
 {
     int i = 0, offset_SP;
     offset_SP = (tabla_segmentos[registros[SS] & 0x0FFFF]);
     registros[BP] = registros[SP] = registros[SS] + offset_SP; // inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     // subrutina principal
     // argv
-    registros[OP2]= 0x0 & offsets[0];//direccion logica del primer parametro
+    registros[OP2] = 0x0 & offsets[0];          // direccion logica del primer parametro
     PUSH(0, 3, registros, MP, tabla_segmentos); // pushea argc
     // argc
     registros[OP2] = argc;
@@ -264,7 +264,7 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     }
 }
 
-void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param,int offsets[];)
+void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param, int offsets[])
 {
     int i, j, posmem = 0;
 
@@ -291,7 +291,7 @@ void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int can
     }
 }
 
-void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint, int memoria_total,int offsets[])
+void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint, int memoria_total, int offsets[])
 {
     short int i = 0, j = 0, tamanioCS = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0, campos[6], baseCS, baseKS;
     unsigned char x, identificador[6], version, tam[2];
@@ -361,7 +361,7 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 // Cargo los parametros si es que hay
                 if (flag_p == 'p')
                 {
-                    cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p,offsets);
+                    cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p, offsets);
                 }
                 // Paso a memoria
                 baseCS = Conversor_Memoria_Fisica(tabla_segmentos, registros[CS], 4);
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
     char nombre_vmx[256] = "\0", flag_d = '\0', flag_p = '\0', nombre_vmi[256] = "\0";
     int16_t entrypoint;
     int tabla_segmentos[TAM_TABLA];
-    int registros[CANT_REGS],offsets[50];
+    int registros[CANT_REGS], offsets[50];
     Tmnemonicos VMnemonicos[CANT_MNE];
     int cantparam = 0, i, memoria_kib = 16;
     char *parametros[30];
@@ -436,7 +436,7 @@ int main(int argc, char *argv[])
             strcpy(nombre_vmi, argv[i]);
         }
     }
-    unsigned char MP[memoria_kib*1024];//rompo con la programacion estructurada 
+    unsigned char MP[memoria_kib * 1024]; // rompo con la programacion estructurada
     cargar_mnemonicos(VMnemonicos);
 
     if (nombre_vmx[0] == '\0' && nombre_vmi[0] == '\0')
@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
     }
     else if (nombre_vmx[0] != '\0')
     {
-        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint, memoria_kib * 1024,offsets);
+        leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint, memoria_kib * 1024, offsets);
     }
     else
     {
@@ -455,11 +455,11 @@ int main(int argc, char *argv[])
 
     configurar_debug(nombre_vmi, memoria_kib);
 
-        // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-        while (registros[IP] != -1)
-        {
-            ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d, entrypoint);
-            verificar_paso_a_paso(registros, tabla_segmentos, MP);
-        }
+    // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
+    while (registros[IP] != -1)
+    {
+        ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d, entrypoint);
+        verificar_paso_a_paso(registros, tabla_segmentos, MP);
+    }
     return 0;
 }
