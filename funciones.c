@@ -97,7 +97,7 @@ int Conversor_Memoria_Fisica(int tabla_segmentos[], int registro, int cant)
     int limite = tabla_segmentos[pos] & 0x0000FFFF; // Tamaño del segmento
     int direccionfisica = direccionbase + offset;
 
-    if (offset + cant < limite)
+    if (offset + cant <= limite)
         return direccionfisica;
     else
         return -1;

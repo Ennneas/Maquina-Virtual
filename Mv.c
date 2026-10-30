@@ -56,7 +56,7 @@ void disassembler_constantes(char MP[], int tabla_segmentos[], int registros[], 
 void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[], int entrypoint)
 {
     int direfis, registro, inmediato, longop, mod, sector;
-    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca = " ", suf, pref;
+    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca = ' ', suf, pref;
     static const char *NOMBRES[32] = {
         "IP ", "OPC", "OP1", "OP2", "LAR", "MAR", "MBR", "SP ", "BP ", "???",
         "EAX", "EBX", "ECX", "EDX", "EEX", "EFX", "AC ", "CC ",
@@ -167,7 +167,7 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, int entrypoint)
 {
     char primer_byte, MNEM[5];
-    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 4);
+    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 1);
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
@@ -203,8 +203,8 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
     }
     else
     {
-        registros[IP] = -1; // en el caso que no haya un stop
-        printf("\n SEGMENTATION FAULT");
+        // Fin de ejecucion: IP apunto fuera del Code Segment (lectura normal de fin de codigo)
+        registros[IP] = -1;
     }
 }
 int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
