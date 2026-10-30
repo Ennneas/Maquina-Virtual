@@ -10,7 +10,7 @@ int Conversor_Memoria_Fisica(int[], int, int);
 void cargar_mnemonicos(Tmnemonicos[]);
 int lectura(int, int, int[], int[], unsigned char[]);
 void escritura(int, int, int[], int[], unsigned char[], int);
-void actualiza_CC(int[], int, int);
+void actualiza_CC(int[], long long int, unsigned long long int, int);
 
 // Funciones de strings
 void string_read(int registros[], int tabla_segmentos[], unsigned char MP[]);
