@@ -207,14 +207,15 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         registros[IP] = -1;
     }
 }
-int calculartamanioPS(char *parametros[], int cantparam, char flag_param)
+int calculartamanioPS(char *parametros[], int cantparam, char flag_param, char nombreArch[])
 {
     int tam = 0, i;
     if (flag_param == 'p')
     {
+        tam += strlen(nombreArch) + 1; // nombre del .vmx + '\0'
         for (i = 0; i < cantparam; i++)
-            tam += strlen(parametros[i]) + 1; // string + '\0'
-        tam += 4 * cantparam;                 // un puntero de 4 bytes por string
+            tam += strlen(parametros[i]) + 1; // cada string + '\0'
+        tam += 4 * (cantparam + 1);           // un puntero por el nombre y uno por cada parametro
     }
     return tam;
 }
@@ -234,9 +235,9 @@ void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[],
     registros[OP2] = entrypoint;
     CALL(0, 1, registros, MP, tabla_segmentos); // llama a la subrutina principal
 }
-void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total)
+void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total, char nombreArch[])
 {
-    int tamanios[6] = {calculartamanioPS(parametros, cantparam, flag_param), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
+    int tamanios[6] = {calculartamanioPS(parametros, cantparam, flag_param, nombreArch), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
     // PS=31, KS=30, CS=26, DS=27, ES=2 8, SS=29
     int reg_seg[6] = {31, 30, 26, 27, 28, 29};
     int i;
@@ -356,7 +357,7 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 offsetEP = campos[5];
                 *entrypoint = offsetEP;
                 // Inicializo la tabla de segmentos
-                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP, memoria_total);
+                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP, memoria_total, nombreArch);
 
                 // Cargo los parametros si es que hay
                 if (flag_p == 'p')
