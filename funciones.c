@@ -913,7 +913,7 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     int32_t valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
-    int offset_sp = registros[SP] & 0x0000FFFF;
+    int offset_sp = registros[SP] & 0x0000FFFF,i;
     if (offset_sp < 4) // Stack Overflow (llegó al fondo del segmento SS)
     {
         printf("\nSTACK OVERFLOW");
@@ -929,7 +929,7 @@ void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
         registros[MAR] |= dir_fisica;
         registros[MBR] = valor;
         for (int i = 0; i < 4; i++)
-            MP[dir_fisica + i] = (valor >> (8 * (3 - i))) & 0xFF; // Big Endian
+            MP[dir_fisica+i] = (valor >> (8 * (3 - i))) & 0xFF; // Big Endian
     }
     else
     {

@@ -56,7 +56,7 @@ void disassembler_constantes(char MP[], int tabla_segmentos[], int registros[], 
 void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], char MNEM[5], char MP[], int entrypoint)
 {
     int direfis, registro, inmediato, longop, mod, sector;
-    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca = ' ', suf, pref;
+    char OP_A[20] = "\0", OP_B[20] = "\0", Cad_Instru[32] = "", marca =' ', suf, pref;
     static const char *NOMBRES[32] = {
         "IP ", "OPC", "OP1", "OP2", "LAR", "MAR", "MBR", "SP ", "BP ", "???",
         "EAX", "EBX", "ECX", "EDX", "EEX", "EFX", "AC ", "CC ",
@@ -167,7 +167,7 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, int entrypoint)
 {
     char primer_byte, MNEM[5];
-    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 1);
+    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 4);
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
@@ -177,7 +177,7 @@ void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmne
         opc = (primer_byte & 0b00011111);       // Codigo de Operacion
         if (valida_instruccion(opc, VMnemonicos, &indice_Mnemonico))
         { // rompo con la programacion estructurada ajkajaj
-            carga_operandos(top1, top2, registros, MP, registros[IP] + 1);
+            carga_operandos(top1, top2, registros, MP, Memoria_fisica_IP + 1);
             if (flag_dissasembler == 'd')
             {
 
@@ -222,17 +222,18 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param, char n
 void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[], int argc, int vpunteros_parametros[], int16_t entrypoint)
 {
     int i = 0, offset_SP;
-    offset_SP = (tabla_segmentos[registros[SS] & 0x0FFFF]);
+    offset_SP = tabla_segmentos[((unsigned int)registros[SS] & 0xFFFF0000) >> 16] & 0xFFFF;
     registros[BP] = registros[SP] = registros[SS] + offset_SP; // inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     // subrutina principal
     // argv
-    registros[OP2] = 0x0 & vpunteros_parametros[0]; // direccion logica del primer parametro
-    PUSH(0, 3, registros, MP, tabla_segmentos);     // pushea argc
+    registros[OP2] = 0x0 + vpunteros_parametros[0]; // direccion logica del primer parametro
+    PUSH(0, 2, registros, MP, tabla_segmentos);     // pushea *argv
     // argc
     registros[OP2] = argc;
-    PUSH(0, 3, registros, MP, tabla_segmentos); // pushea *argv
+    PUSH(0, 2, registros, MP, tabla_segmentos); // pushea argc
     // IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
-    registros[OP2] = entrypoint;
+    registros[IP]+=entrypoint;
+    registros[OP2] = 0x0; //codigo del registro IP
     CALL(0, 1, registros, MP, tabla_segmentos); // llama a la subrutina principal
 }
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total, char nombreArch[])
@@ -262,7 +263,8 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     {
         printf("Memoria insuficiente");
         registros[IP] = -1;
-    }
+    }else
+        registros[IP]=registros[DS];
 }
 
 void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param, int offsets[])
@@ -439,7 +441,7 @@ int main(int argc, char *argv[])
     }
     unsigned char MP[memoria_kib * 1024]; // rompo con la programacion estructurada
     cargar_mnemonicos(VMnemonicos);
-
+    printf("\n%s",nombre_vmi);
     if (nombre_vmx[0] == '\0' && nombre_vmi[0] == '\0')
     {
         printf("No se cargo el archivo .vmx ni .vmi\n");
@@ -456,8 +458,8 @@ int main(int argc, char *argv[])
 
     configurar_debug(nombre_vmi, memoria_kib);
 
-    // ciclo de lectura de MP hasta  SEGMENTATION FAULT (IP=-1)
-    while (registros[IP] != -1)
+    // ciclo de lectura de MP hasta  (IP=-1)
+    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP],4)!=-1)
     {
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d, entrypoint);
         verificar_paso_a_paso(registros, tabla_segmentos, MP);
