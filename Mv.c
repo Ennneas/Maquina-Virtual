@@ -421,6 +421,7 @@ int main(int argc, char *argv[])
     Tmnemonicos VMnemonicos[CANT_MNE];
     int cantparam = 0, i, memoria_kib = 16;
     char *parametros[30];
+    unsigned char *MP;
 
     // Insertar funcion configurar debug despues de que se lean los argumentos del programa
 
@@ -451,7 +452,7 @@ int main(int argc, char *argv[])
             strcpy(nombre_vmi, argv[i]);
         }
     }
-    unsigned char MP[memoria_kib * 1024]; // rompo con la programacion estructurada
+    
     cargar_mnemonicos(VMnemonicos);
     printf("\n%s",nombre_vmi);
     if (nombre_vmx[0] == '\0' && nombre_vmi[0] == '\0')
@@ -459,7 +460,17 @@ int main(int argc, char *argv[])
         printf("No se cargo el archivo .vmx ni .vmi\n");
         return 1;
     }
-    else if (nombre_vmx[0] != '\0')
+
+    //Creo la memoria
+    MP = (unsigned char *)malloc(memoria_kib * 1024 * sizeof(unsigned char));
+    if (MP == NULL){
+        printf("Error: No se pudo asignar memoria suficiente \n");
+        return 1;
+    } else {
+        memset(MP, 0, memoria_kib * 1024 * sizeof(unsigned char));
+    }
+
+    if (nombre_vmx[0] != '\0')
     {
         leer_codigo(registros, tabla_segmentos, MP, nombre_vmx, flag_p, parametros, cantparam, VMnemonicos, flag_d, &entrypoint, memoria_kib * 1024, offsets);
     }
@@ -476,5 +487,6 @@ int main(int argc, char *argv[])
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d, entrypoint);
         verificar_paso_a_paso(registros, tabla_segmentos, MP);
     }
+    free(MP);
     return 0;
 }

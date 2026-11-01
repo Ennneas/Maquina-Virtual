@@ -777,7 +777,7 @@ void SYS(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     int dir_log = registros[EDX];           // puntero inicial
     if (llamada == 0)
     {                           // Limpiar pantalla
-        printf("\033[H\033[J"); // Caracter ESC en otcal (27), seguido de [ para iniciar comandos, H mueve el cursor al inicio y J Borra todo lo que este despues del cursor
+        printf("\033[H\033[J"); // Caracter ESC en octal (27), seguido de [ para iniciar comandos, H mueve el cursor al inicio y J Borra todo lo que este despues del cursor
     }
     else if (llamada == 1)
     {
