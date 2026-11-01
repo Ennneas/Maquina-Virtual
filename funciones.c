@@ -31,7 +31,8 @@ void actualiza_CC(int registros[], long long int resu_s, unsigned long long int 
 }
 void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
-    int Direccion_Fisica, valor, i, offset, Dire_logica, cant;
+    int Direccion_Fisica, valor, i , Dire_logica, cant;
+    short int offset;
     offset = (registros[OP] & 0x00FFFF00) >> 8;
     Dire_logica = registros[registros[OP] & 0b00000000000000000000000000011111];
     Dire_logica += offset;
@@ -270,7 +271,8 @@ void cargar_mnemonicos(Tmnemonicos vectormnemonico[])
 // ===== Dos operandos =====
 void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigned char MP[], int valor_leido)
 {
-    int direcF, cod_registro, i, offset, base, cant, sector;
+    int direcF, cod_registro, i, base, cant, sector;
+    short int offset;
     if (tipo == 3)
     {
         offset = (registros[OP] & 0x00FFFF00);
@@ -282,13 +284,15 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
         offset = offset >> 8;
         registros[LAR] = registros[registros[OP] & 0x01F] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = cant << 16;                                // reset MAR
-        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR],4);
+        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR],cant);
+        if (cant==1)
+            valor_leido=valor_leido & 0xFF;
         if (direcF != -1)
         {
             registros[MAR] |= direcF; // MAR parte baja
             for (i = 0; i < (registros[MAR] & 0xFFFF0000) >> 16; i++)
             {
-                MP[direcF + i] = (valor_leido >> (8 * (4 - 1 - i))); // va escribiendo en memoria,big endian o little??
+                MP[direcF + i] = (valor_leido >> (8 * (cant - 1 - i))); // va escribiendo en memoria,big endian o little??
             }
         }
         else
@@ -336,7 +340,7 @@ void ADD(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 }
 void SUB(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
-    uint16_t valor1, valor2;
+    uint32_t valor1, valor2;
     int resta;
     long long int resu_s;
     unsigned long long int resu_u;

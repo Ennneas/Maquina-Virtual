@@ -63,7 +63,7 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
         "???", "???", "???", "???", "???", "???", "???", "???",
         "CS ", "DS ", "ES ", "SS ", "KS ", "PS "};
 
-    direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 4);
+    direfis = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 1);
 
     if (top1 == 3)
     {
@@ -167,7 +167,7 @@ void disassembler(int top1, int top2, int registros[], int tabla_segmentos[], ch
 void ejecuta_instruccion(char MP[], int registros[], int tabla_segmentos[], Tmnemonicos VMnemonicos[], char flag_dissasembler, int entrypoint)
 {
     char primer_byte, MNEM[5];
-    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP], 4);
+    int top1, top2, opc, indice_Mnemonico, Memoria_fisica_IP = Conversor_Memoria_Fisica(tabla_segmentos, registros[IP],1);
     if (Memoria_fisica_IP != -1)
     {
         primer_byte = MP[Memoria_fisica_IP];
@@ -219,22 +219,21 @@ int calculartamanioPS(char *parametros[], int cantparam, char flag_param, char n
     }
     return tam;
 }
-void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[], int argc, int vpunteros_parametros[], int16_t entrypoint)
+void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[], int argc, int16_t entrypoint,int offset_parametros)
 {
     int i = 0, offset_SP;
     offset_SP = tabla_segmentos[((unsigned int)registros[SS] & 0xFFFF0000) >> 16] & 0xFFFF;
     registros[BP] = registros[SP] = registros[SS] + offset_SP; // inicio del stack segment + el tamaño del segmento (posicionar BP Y SP al final del segmento)    }
     // subrutina principal
     // argv
-    registros[OP2] = 0x0 + vpunteros_parametros[0]; // direccion logica del primer parametro
+    registros[OP2] = registros[PS] +  offset_parametros; // direccion logica del primer parametro
     PUSH(0, 2, registros, MP, tabla_segmentos);     // pushea *argv
     // argc
-    registros[OP2] = argc;
+    registros[OP2] = argc+1;
     PUSH(0, 2, registros, MP, tabla_segmentos); // pushea argc
     // IP inicialmente vale -1 y en call se lo reserva en la pila,Cuando el usuario termina la subrutina debe poner el RET
-    registros[IP]+=entrypoint;
-    registros[OP2] = 0x0; //codigo del registro IP
-    CALL(0, 1, registros, MP, tabla_segmentos); // llama a la subrutina principal
+    registros[OP2] = entrypoint; //codigo del registro IP
+    CALL(0, 2, registros, MP, tabla_segmentos); // llama a la subrutina principal
 }
 void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total, char nombreArch[])
 {
@@ -264,18 +263,18 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
         printf("Memoria insuficiente");
         registros[IP] = -1;
     }else
-        registros[IP]=registros[DS];
+        registros[IP]=-1;
 }
 
-void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param, int offsets[])
+void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param, int offsets[],int *offset_parametros)
 {
     int i, j, posmem = 0;
-
+    *offset_parametros=0;
     offsets[0] = 0;
-    for (i = 0; nombreArch[i] != '\0'; i++)
+    for (i = 0; nombreArch[i] != '\0'; i++){
         MP[posmem++] = nombreArch[i];
+    }
     MP[posmem++] = 0x00; // FIX: faltaba el '\0'
-
     for (i = 0; i < cantparam; i++)
     {
         offsets[i + 1] = posmem;
@@ -284,7 +283,7 @@ void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int can
             MP[posmem++] = parametros[i][j];
         MP[posmem++] = 0x00; // FIX: faltaba el '\0'
     }
-
+    *offset_parametros+=posmem;
     for (i = 0; i < cantparam + 1; i++)
     {
         MP[posmem++] = 0x00;
@@ -297,6 +296,7 @@ void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int can
 void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_MEMORIA], char nombreArch[], char flag_p, char *parametros[], int cantparam, Tmnemonicos VMnemonicos[], char flag_d, int16_t *entrypoint, int memoria_total, int offsets[])
 {
     short int i = 0, j = 0, tamanioCS = 0, tamanioDS = 0, tamanioES = 0, tamanioSS = 0, tamanioKS = 0, offsetEP = 0, campos[6], baseCS, baseKS;
+    int offset_parametros;
     unsigned char x, identificador[6], version, tam[2];
     FILE *Arch;
     Arch = fopen(nombreArch, "rb");
@@ -364,7 +364,7 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 // Cargo los parametros si es que hay
                 if (flag_p == 'p')
                 {
-                    cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p, offsets);
+                    cargarparamenmem(MP, parametros, cantparam, nombreArch, flag_p, offsets,&offset_parametros);
                 }
                 // Paso a memoria
                 baseCS = Conversor_Memoria_Fisica(tabla_segmentos, registros[CS], 4);
@@ -378,7 +378,10 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                     disassembler_constantes(MP, tabla_segmentos, registros, tamanioKS);
 
                 // Inicializo la pila
-                inicializa_pila(registros, tabla_segmentos, MP, cantparam, offsets, offsetEP); // subrutina principal
+                if (flag_p=='p')
+                    inicializa_pila(registros, tabla_segmentos, MP, cantparam, offsetEP,offset_parametros); // subrutina principal
+                else
+                    inicializa_pila(registros, tabla_segmentos, MP, 0, offsetEP, 0); // subrutina principal
             }
             else
             {
@@ -459,7 +462,7 @@ int main(int argc, char *argv[])
     configurar_debug(nombre_vmi, memoria_kib);
 
     // ciclo de lectura de MP hasta  (IP=-1)
-    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP],4)!=-1)
+    while (registros[IP] != -1 && Conversor_Memoria_Fisica(tabla_segmentos, registros[IP],1)!=-1)
     {
         ejecuta_instruccion(MP, registros, tabla_segmentos, VMnemonicos, flag_d, entrypoint);
         verificar_paso_a_paso(registros, tabla_segmentos, MP);
