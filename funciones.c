@@ -31,7 +31,7 @@ void actualiza_CC(int registros[], long long int resu_s, unsigned long long int 
 }
 void lee_memoria(int OP, int registros[], int tabla_segmentos[], unsigned char MP[])
 {
-    int Direccion_Fisica, valor, i , Dire_logica, cant;
+    int Direccion_Fisica, valor, i, Dire_logica, cant;
     short int offset;
     offset = (registros[OP] & 0x00FFFF00) >> 8;
     Dire_logica = registros[registros[OP] & 0b00000000000000000000000000011111];
@@ -284,9 +284,9 @@ void escritura(int tipo, int OP, int registros[], int tabla_segmentos[], unsigne
         offset = offset >> 8;
         registros[LAR] = registros[registros[OP] & 0x01F] + offset; // a la direccion logica del registro del OPERANDO le agrego el offset
         registros[MAR] = cant << 16;                                // reset MAR
-        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR],cant);
-        if (cant==1)
-            valor_leido=valor_leido & 0xFF;
+        direcF = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], cant);
+        if (cant == 1)
+            valor_leido = valor_leido & 0xFF;
         if (direcF != -1)
         {
             registros[MAR] |= direcF; // MAR parte baja
@@ -340,16 +340,11 @@ void ADD(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 }
 void SUB(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 { // afecta al registro CC
-    uint32_t valor1, valor2;
-    int resta;
+    int valor1, valor2, resta;
     long long int resu_s;
     unsigned long long int resu_u;
     valor2 = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
     valor1 = lectura(tipo1, OP1, registros, tabla_segmentos, MP);
-    if (valor1 > 32768) // como los inmediatos son de  16 bits  y van de -32768 a 32768, si es mayor a 32768, entonces es negativo
-        valor1 = valor1 - 65536;
-    if (valor2 > 32768)          // si quiero restar 2 direcciones de memoria????
-        valor2 = valor2 - 65536; // solo si el negativo "viene" de un inmediato
 
     resu_s = (long long int)valor1 - (long long int)valor2;
     resta = (int)resu_s;
@@ -917,7 +912,7 @@ void NOT(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
 void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_segmentos[])
 {
     int32_t valor = lectura(tipo2, OP2, registros, tabla_segmentos, MP);
-    int offset_sp = registros[SP] & 0x0000FFFF,i;
+    int offset_sp = registros[SP] & 0x0000FFFF, i;
     if (offset_sp < 4) // Stack Overflow (llegó al fondo del segmento SS)
     {
         printf("\nSTACK OVERFLOW");
@@ -927,13 +922,13 @@ void PUSH(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
     registros[SP] -= 4; // Decrementa antes de escribir
     registros[LAR] = registros[SP];
     registros[MAR] = 4 << 16;
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR],4);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (dir_fisica != -1)
     {
         registros[MAR] |= dir_fisica;
         registros[MBR] = valor;
         for (int i = 0; i < 4; i++)
-            MP[dir_fisica+i] = (valor >> (8 * (3 - i))) & 0xFF; // Big Endian
+            MP[dir_fisica + i] = (valor >> (8 * (3 - i))) & 0xFF; // Big Endian
     }
     else
     {
@@ -954,7 +949,7 @@ void POP(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
     }
     registros[LAR] = registros[SP];
     registros[MAR] = 4 << 16;
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR],4);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (dir_fisica != -1)
     {
         registros[MAR] |= dir_fisica;
@@ -983,7 +978,7 @@ void CALL(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_s
         return;
     }
     registros[SP] -= 4;
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[SP],4);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[SP], 4);
     if (dir_fisica != -1)
     {
         int32_t dir_retorno = registros[IP];
@@ -1010,7 +1005,7 @@ void RET(int tipo1, int tipo2, int registros[], unsigned char MP[], int tabla_se
         return;
     }
     registros[LAR] = registros[SP];
-    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR],4);
+    int dir_fisica = Conversor_Memoria_Fisica(tabla_segmentos, registros[LAR], 4);
     if (dir_fisica != -1)
     {
         int32_t dir_retorno = 0;
