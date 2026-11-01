@@ -235,7 +235,7 @@ void inicializa_pila(int registros[], int tabla_segmentos[], unsigned char MP[],
     registros[OP2] = entrypoint; //codigo del registro IP
     CALL(0, 2, registros, MP, tabla_segmentos); // llama a la subrutina principal
 }
-void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total, char nombreArch[])
+int inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[], int cantparam, int tamanioCS, int tamanioDS, int tamanioES, int tamanioSS, int tamanioKS, char flag_param, int offsetEP, int memoria_total, char nombreArch[])
 {
     int tamanios[6] = {calculartamanioPS(parametros, cantparam, flag_param, nombreArch), tamanioKS, tamanioCS, tamanioDS, tamanioES, tamanioSS}; // PS, KS, CS, DS, ES, SS (en ese orden)
     // PS=31, KS=30, CS=26, DS=27, ES=2 8, SS=29
@@ -261,9 +261,14 @@ void inicializar_tabla(int tabla_segmentos[], int registros[], char *parametros[
     if (base > memoria_total)
     {
         printf("Memoria insuficiente");
-        registros[IP] = -1;
-    }else
-        registros[IP]=-1;
+        registros[IP] = -1; // No alcanza la memoria 
+        return 0;
+    }
+    else
+    {
+        registros[IP] = -1; // Alcanza la memoria, pero inicializamos en -1 para que al terminar main quede ahi
+        return 1;
+    }
 }
 
 void cargarparamenmem(unsigned char MP[MAX_MEMORIA], char *parametros[], int cantparam, char nombreArch[], char flag_param, int offsets[],int *offset_parametros)
@@ -358,8 +363,12 @@ void leer_codigo(int registros[], int tabla_segmentos[], unsigned char MP[MAX_ME
                 tamanioKS = campos[4];
                 offsetEP = campos[5];
                 *entrypoint = offsetEP;
+                
                 // Inicializo la tabla de segmentos
-                inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP, memoria_total, nombreArch);
+                if (!inicializar_tabla(tabla_segmentos, registros, parametros, cantparam, tamanioCS, tamanioDS, tamanioES, tamanioSS, tamanioKS, flag_p, offsetEP, memoria_total, nombreArch)) {
+                    fclose(Arch);
+                    return;
+                }
 
                 // Cargo los parametros si es que hay
                 if (flag_p == 'p')
